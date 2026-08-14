@@ -1,0 +1,27 @@
+# Python / backend
+backend/venv/
+backend/.env
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node / web
+web/node_modules/
+web/dist/
+web/.env
+
+# Flutter / mobile
+mobile/.dart_tool/
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/*.iml
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings (machine-specific)
+.claude/settings.local.json
