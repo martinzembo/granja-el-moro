@@ -11,9 +11,12 @@ una API común. Contexto completo del negocio, objetivos y alcance en
 [docs/propuesta.md](docs/propuesta.md).
 
 Plan de desarrollo (orden de construcción por etapas, no un cronograma
-estricto) en [docs/plan.md](docs/plan.md). Modelo de datos, incluyendo
-supuestos pendientes de validar con la granja (unidades de medida, estructura
-real de la tabla de liquidación), en [docs/modelo-datos.md](docs/modelo-datos.md).
+estricto) en [docs/plan.md](docs/plan.md). Modelo de datos en
+[docs/modelo-datos.md](docs/modelo-datos.md) — está basado en datos reales de
+una crianza real de la granja (mensajes de WhatsApp del granjero + el Excel
+`docs/crianza92.xls` que arma el administrador), no en supuestos. Las
+fórmulas de cierre (índice de crecimiento, conversión, índice de eficiencia)
+están verificadas exactas contra esos números reales.
 
 ## Repo layout (monorepo)
 
@@ -47,12 +50,17 @@ Capas, de afuera hacia adentro:
 
 - `app/main.py` — arma la app FastAPI e incluye los routers.
 - `app/api/routers/*.py` — un router por recurso (`auth`, `galpones`,
-  `crianzas`, ...). Los endpoints son delgados: validan con el schema de
-  Pydantic, hacen la operación de SQLAlchemy directo contra la sesión, devuelven.
-  No hay capa de repositorio/service intermedia — para este tamaño de proyecto
-  se decidió no agregarla; si un endpoint empieza a acumular lógica de negocio
-  no trivial (ver Semana 3 del plan: alertas, índices de conversión/crecimiento),
-  esa lógica va en un módulo aparte, no inline en el router.
+  `crianzas`, `lecturas`, `insumos`, `retiros`, `cierre`). Los endpoints son
+  delgados: validan con el schema de Pydantic, hacen la operación de
+  SQLAlchemy directo contra la sesión, devuelven. No hay capa de
+  repositorio/service genérica — para este tamaño de proyecto se decidió no
+  agregarla. La única excepción es `app/services/calculos.py`: el cierre de
+  crianza (índice de crecimiento, conversión, índice de eficiencia,
+  liquidación) es lógica de negocio no trivial y verificada contra datos
+  reales, así que vive en un módulo aparte en vez de inline en
+  `routers/cierre.py`. Si otro endpoint empieza a acumular ese tipo de
+  lógica (ver Semana 3 del plan: alertas por desvío de `Estandar`), va en
+  `app/services/` también, no inline en el router.
 - `app/api/deps.py` — dependencias de FastAPI compartidas: `get_current_user`
   decodifica el JWT contra la tabla `usuarios`; `require_role(*roles)` es una
   factory que devuelve una dependency para restringir un endpoint a roles
@@ -87,13 +95,29 @@ dependency `get_db` de la app — los tests no requieren Postgres. Cada test
 recibe una base limpia (`create_all`/`drop_all` por fixture). Al agregar un
 router nuevo, seguir el patrón de `tests/test_auth.py` (fixture `client`).
 
+### Granularidad de la carga de datos (importante)
+
+No todo se carga por galpón ni todo diario — ver
+[docs/modelo-datos.md](docs/modelo-datos.md) para el detalle completo, pero
+en resumen: mortandad y agua son **por galpón, diarias** (`LecturaDiariaGalpon`,
+agua como lectura cruda de caudalímetro, no consumo ya calculado); gas y
+electricidad son **de toda la granja, diarias** (`LecturaDiariaGranja`, un
+solo medidor de cada uno); alimento y cáscara son **por evento** (remito,
+`EntregaInsumo`, no diario, no por galpón). Un galpón puede tener varias
+partidas de ingreso de aves con fechas/orígenes distintos (`IngresoAves`) —
+la edad de un galpón para comparar contra `Estandar` es un promedio
+ponderado por esas partidas (`edad_ponderada` en `app/services/calculos.py`),
+no una resta simple de fechas.
+
 ### Pendiente / decisiones abiertas
 
-Ver la sección final de [docs/modelo-datos.md](docs/modelo-datos.md) — hay
-varios campos del modelo (unidades de agua/gas/electricidad, frecuencia de
-pesaje, estructura de la tabla de liquidación de doble entrada) marcados
-`[CONFIRMAR]` porque se derivaron de la propuesta sin validar con la granja.
-No asumir que esos valores son definitivos al construir sobre ellos.
+Ver la sección final de [docs/modelo-datos.md](docs/modelo-datos.md). Lo más
+relevante: el reparto de alimento consumido por galpón es una aproximación
+(proporcional a aves×días, igual criterio que usa el Excel de la granja pero
+no idéntico bit a bit), y la tabla real de precio de liquidación
+(`indice_tabla` en `CierreCrianza`) es un dato de entrada manual — el
+administrador confirmó que ese cálculo lo hace la integradora con su propia
+fórmula interna, no se modela acá.
 
 ## Mobile y Web
 

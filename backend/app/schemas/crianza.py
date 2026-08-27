@@ -6,6 +6,7 @@ from app.models.crianza import EstadoCrianza
 
 
 class CrianzaCreate(BaseModel):
+    numero: int
     fecha_inicio: date
 
 
@@ -13,6 +14,7 @@ class CrianzaOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
+    numero: int
     fecha_inicio: date
     fecha_cierre: date | None
     estado: EstadoCrianza
@@ -22,8 +24,6 @@ class CrianzaOut(BaseModel):
 class CrianzaGalponCreate(BaseModel):
     galpon_id: int
     granjero_id: int
-    aves_iniciales: int
-    peso_inicial_promedio: float | None = None
 
 
 class CrianzaGalponOut(BaseModel):
@@ -33,5 +33,22 @@ class CrianzaGalponOut(BaseModel):
     crianza_id: int
     galpon_id: int
     granjero_id: int
-    aves_iniciales: int
-    peso_inicial_promedio: float | None
+
+
+class IngresoAvesCreate(BaseModel):
+    fecha: date
+    origen: str
+    cantidad: int
+    muertos_transporte: int = 0
+
+
+class IngresoAvesOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    crianza_galpon_id: int
+    fecha: date
+    origen: str
+    cantidad: int
+    muertos_transporte: int
+    cantidad_neta: int

@@ -35,8 +35,34 @@ datos vía Postman.
 - Pantallas de carga de datos diarios (lo que hoy hacen por WhatsApp)
 - Manejo de estado, offline-first si aplica (importante en zona rural con
   conectividad débil)
+- **A evaluar**: carga de lecturas de medidor (agua/gas/luz) por foto, con
+  OCR para leer el número automáticamente y reducir error humano. Ver nota
+  de factibilidad más abajo — no es bloqueante para el resto de la etapa.
 
 **Hito:** un trabajador puede loguearse y cargar datos reales desde el celular.
+
+### Nota: OCR de medidores (foto → número)
+
+Idea del administrador: que el granjero saque una foto del medidor (como las
+que ya mandó por WhatsApp) y la app lea el número sola. Es viable, pero con
+matices:
+
+- **Enfoque recomendado**: OCR asistido, no automático a ciegas. La app
+  sugiere un valor leído de la foto, pero el granjero lo confirma o corrige
+  antes de guardar — un error de OCR en una lectura de medidor se arrastra
+  al cálculo de consumo del día siguiente (resta contra la lectura anterior),
+  así que conviene un humano en el loop, al menos al principio.
+- **Dónde correrlo**: mejor en el dispositivo (ML Kit de Google, gratis,
+  funciona sin conexión) que contra un servicio en la nube — la propuesta ya
+  marca la conectividad rural como riesgo, y esto no debería depender de
+  tener señal en el momento de la carga.
+- **Dificultad real**: los medidores de agua tienen rueditas mecánicas (fáciles
+  para OCR) pero el de gas y los de luz son de dígitos con fondos/reflejos
+  variables (fotos con mala luz, vidrio sucio) — la precisión no va a ser
+  perfecta, de ahí lo de confirmar antes de guardar.
+- Se puede dejar para una segunda vuelta de la app móvil (no imprescindible
+  para el primer prototipo funcional) y decidir en base a cómo reacciona el
+  granjero probando la carga manual primero.
 
 ## Semana 6-7: Panel web React (admin)
 

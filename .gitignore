@@ -25,3 +25,6 @@ Thumbs.db
 
 # Claude Code local settings (machine-specific)
 .claude/settings.local.json
+
+# Datos reales de la granja (costos, tarifas, producción) - no se comparte
+docs/crianza92.xls
