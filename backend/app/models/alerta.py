@@ -10,17 +10,27 @@ from app.db.session import Base
 class TipoAlerta(str, enum.Enum):
     mortandad = "mortandad"
     agua = "agua"
-    alimento = "alimento"
-    peso = "peso"
+    gas = "gas"
+    electricidad = "electricidad"
 
 
 class Alerta(Base):
-    """Generada automáticamente cuando un RegistroDiario se desvía de un Estandar."""
+    """Generada cuando una lectura se desvía de un Estandar (Semana 3).
+
+    Referencia una de las dos tablas de lectura según el tipo: mortandad y
+    agua vienen de LecturaDiariaGalpon; gas y electricidad de
+    LecturaDiariaGranja. Solo una de las dos FK va cargada según el caso.
+    """
 
     __tablename__ = "alertas"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    registro_diario_id: Mapped[int] = mapped_column(ForeignKey("registros_diarios.id"))
+    lectura_diaria_galpon_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lecturas_diarias_galpon.id"), nullable=True
+    )
+    lectura_diaria_granja_id: Mapped[int | None] = mapped_column(
+        ForeignKey("lecturas_diarias_granja.id"), nullable=True
+    )
     tipo: Mapped[TipoAlerta] = mapped_column(Enum(TipoAlerta))
     descripcion: Mapped[str] = mapped_column(String(255))
     fecha: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

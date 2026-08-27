@@ -5,13 +5,15 @@ from app.db.session import Base
 
 
 class Estandar(Base):
-    """Valores esperados por día de crianza, usados para detectar desvíos."""
+    """Valores esperados por día de vida, usados para alertas (Semana 3).
+
+    Tabla global por ahora (no distingue línea genética/raza) — ver
+    docs/modelo-datos.md.
+    """
 
     __tablename__ = "estandares"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    dia_de_crianza: Mapped[int] = mapped_column(Integer)
-    mortandad_max_esperada: Mapped[float] = mapped_column(Numeric(10, 2))
-    consumo_agua_esperado: Mapped[float] = mapped_column(Numeric(10, 2))
-    consumo_alimento_esperado: Mapped[float] = mapped_column(Numeric(10, 2))
-    peso_esperado: Mapped[float] = mapped_column(Numeric(10, 2))
+    dia_vida: Mapped[int] = mapped_column(Integer, unique=True, index=True)
+    mortandad_acumulada_esperada: Mapped[int] = mapped_column(Integer)
+    agua_litros_pollo_esperado: Mapped[float] = mapped_column(Numeric(10, 4))
