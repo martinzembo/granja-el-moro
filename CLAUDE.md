@@ -5,10 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 Sistema de gestión de crianzas avícolas para Granja "El Moro" (Lobos, Buenos
-Aires). Reemplaza un flujo manual de WhatsApp + planillas por una app móvil
-(carga diaria de granjeros) + panel web (monitoreo del administrador) sobre
-una API común. Contexto completo del negocio, objetivos y alcance en
-[docs/propuesta.md](docs/propuesta.md).
+Aires). Reemplaza un flujo manual de WhatsApp + planillas por una app
+Android única (carga diaria de granjeros + monitoreo del administrador)
+sobre una API común. Contexto completo del negocio, objetivos y alcance
+original en [docs/propuesta.md](docs/propuesta.md) — la propuesta describe
+un panel web aparte para el administrador; eso se ajustó después, ver
+[docs/plan.md](docs/plan.md) sección "Ajuste de alcance".
 
 Plan de desarrollo (orden de construcción por etapas, no un cronograma
 estricto) en [docs/plan.md](docs/plan.md). Modelo de datos en
@@ -21,9 +23,14 @@ están verificadas exactas contra esos números reales.
 ## Repo layout (monorepo)
 
 - `backend/` — API REST (FastAPI + PostgreSQL + Alembic). En desarrollo activo.
-- `mobile/` — app Flutter para granjeros (carga diaria). Aún no iniciada.
-- `web/` — panel React para el administrador. Aún no iniciada.
-- `docs/` — propuesta de proyecto, plan y modelo de datos.
+- `mobile/` — **una sola** app Flutter/Android para los dos roles (granjero
+  y administrador) — no dos apps, no panel web. Aún no iniciada (Semana 4-7
+  del plan). Ver [docs/plan.md](docs/plan.md), sección "Ajuste de alcance".
+- `web/` — panel React para el administrador. **Pospuesto**, no es alcance
+  actual — la propuesta original lo incluía, pero el cliente prefiere todo
+  dentro de la app Android. Carpeta vacía a propósito.
+- `docs/` — propuesta de proyecto original, plan (con los ajustes de alcance
+  reales) y modelo de datos.
 
 ## Backend
 
@@ -170,8 +177,14 @@ están calibrados con una sola crianza real: van a necesitar ajuste (sobre
 todo gas/electricidad, que dependen de clima/temporada) a medida que se
 acumule historial de más crianzas.
 
-## Mobile y Web
+## Mobile
 
-Todavía no iniciados (Semana 4-5 y 6-7 del plan, respectivamente). Cuando
-arranquen, documentar acá su estructura y comandos siguiendo el mismo formato
-que la sección de Backend.
+Todavía no iniciada (Semana 4-7 del plan — ver [docs/plan.md](docs/plan.md)).
+Un solo proyecto Flutter, un solo APK, para granjeros y administradores.
+Los dos roles **no comparten pantallas**: después del login, cada uno entra
+a una navegación completamente separada armada para su tarea (el granjero
+nunca ve pantallas de admin, ni viceversa) — no es una navegación única con
+tabs condicionales por rol. Cuando arranque, documentar acá su estructura y
+comandos siguiendo el mismo formato que la sección de Backend.
+
+El panel web (`web/`) queda pospuesto — no se lo construye por ahora.
