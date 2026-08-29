@@ -179,12 +179,45 @@ acumule historial de más crianzas.
 
 ## Mobile
 
-Todavía no iniciada (Semana 4-7 del plan — ver [docs/plan.md](docs/plan.md)).
-Un solo proyecto Flutter, un solo APK, para granjeros y administradores.
-Los dos roles **no comparten pantallas**: después del login, cada uno entra
-a una navegación completamente separada armada para su tarea (el granjero
-nunca ve pantallas de admin, ni viceversa) — no es una navegación única con
-tabs condicionales por rol. Cuando arranque, documentar acá su estructura y
-comandos siguiendo el mismo formato que la sección de Backend.
+Un solo proyecto Flutter, un solo APK, para granjeros y administradores
+(Semana 4-7 del plan — ver [docs/plan.md](docs/plan.md)). Los dos roles
+**no comparten pantallas**: después del login, cada uno entra a una
+navegación completamente separada armada para su tarea (el granjero nunca ve
+pantallas de admin, ni viceversa) — no es una navegación única con tabs
+condicionales por rol.
 
 El panel web (`web/`) queda pospuesto — no se lo construye por ahora.
+
+### Entorno (esta máquina)
+
+No usa un instalador estándar (no hay paquete de Flutter en winget) — quedó
+así:
+
+- Flutter SDK: clonado en `C:\src\flutter` (rama `stable`, no vive dentro
+  del repo). Agregado al PATH de usuario.
+- Android SDK: solo las command-line tools (sin Android Studio), en
+  `C:\Android\sdk`. `ANDROID_HOME`/`ANDROID_SDK_ROOT` apuntan ahí.
+- Sin emulador — se prueba contra un celular Android real por USB (con
+  "depuración USB" habilitada en el teléfono).
+- Si una terminal nueva no encuentra `flutter`/`adb`: las variables son a
+  nivel de usuario de Windows, así que una terminal que ya estaba abierta
+  antes de instalar esto no las hereda — hay que abrir una nueva.
+
+### Comandos
+
+```bash
+cd mobile
+
+flutter doctor                    # verifica el toolchain completo
+adb devices                       # confirma que el celular está conectado (debe decir "device", no "unauthorized")
+
+flutter run                       # instala y corre en el celular conectado, con hot reload
+flutter build apk --debug         # compila sin correr (valida que el build funciona)
+
+adb reverse tcp:8000 tcp:8000     # con el celular por USB, así "localhost:8000" en la app
+                                   # apunta al backend corriendo en esta PC (ver backend/README.md)
+```
+
+Cuando el proyecto tenga más estructura que el scaffold de `flutter create`
+(cliente HTTP, manejo de estado, navegación por rol), documentar acá esas
+decisiones siguiendo el mismo formato que la sección de Backend.
