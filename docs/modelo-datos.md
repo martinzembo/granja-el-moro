@@ -75,23 +75,84 @@ agua se comparan contra esta edad, no contra la fecha de la crianza en
 general.
 
 ### Estandar
-Valores esperados por día de vida, usados para alertas (Semana 3). Antes
-tenía también `peso_esperado` y `consumo_alimento_esperado`, que eran
-supuestos sin confirmar — se sacan porque el Excel real no los usa así. Lo
-que sí confirmé, en las columnas STD/TEÓRICO del Excel:
+Valores esperados por día de vida, usados para alertas. Antes tenía también
+`peso_esperado` y `consumo_alimento_esperado`, que eran supuestos sin
+confirmar — se sacan porque el Excel real no los usa así.
 
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | PK | |
 | dia_vida | int | |
-| mortandad_acumulada_esperada | int | cantidad acumulada esperada de muertos, por galpón, a esa edad |
-| agua_litros_pollo_esperado | decimal | litros por ave esperados a esa edad |
+| mortandad_acumulada_esperada | decimal | **fracción (0-1)** de las aves netas ingresadas a ese galpón — no una cantidad absoluta, para que generalice a galpones de cualquier tamaño |
+| agua_litros_pollo_esperado | decimal | litros por ave esperados a esa edad (ya viene por ave en el Excel, no necesita escalarse) |
 
-Por ahora es una única tabla global (no distingue por línea genética/raza).
-El Excel menciona "Pollo Cobb" como referencia — si en el futuro se maneja
-más de una línea genética con curvas distintas, esta tabla necesita un
-`linea_genetica_id`. Lo dejo anotado, no lo modelo todavía (no hay caso real
-que lo requiera hoy).
+Sembrada con los valores reales de `docs/crianza92.xls` (hojas `Mort` y
+`Agua`, columnas STD/TEÓRICO — ver `app/db/seed_estandares.py`). Es la única
+crianza real completa que tenemos, así que es mejor referencia que una tabla
+genérica inventada; comparé la forma de ambas curvas contra la bibliografía
+pública de manejo de Cobb (línea genética que usa la granja, según la nota
+"Pollo Cobb" del Excel) y coinciden en forma y orden de magnitud — mortandad
+en curva de "bañera" (alta al inicio, mínima a mitad de crianza, sube de
+nuevo al final) y agua creciendo de ~2 mL/ave/día a ~300-400 mL/ave/día hacia
+el final. Los valores absolutos de agua de los primeros días son más altos
+que en referencias de EE.UU./Europa, probablemente por el clima de Lobos —
+exactamente por eso se prefirió el dato real de la propia granja en vez de
+una tabla genérica.
+
+Por ahora es una única tabla global (no distingue por línea genética/raza) y
+cubre día 1 a 51 (lo que duró la crianza 92) — más allá de eso no hay dato
+real, la evaluación de alertas simplemente no corre si no hay `Estandar`
+para esa edad. Si en el futuro se maneja más de una línea genética con
+curvas distintas, esta tabla necesita un `linea_genetica_id`. Cuando haya
+más crianzas cerradas, conviene re-sembrar esta tabla con el promedio de
+varias en vez de depender de una sola.
+
+## Alertas
+
+Los umbrales viven en `app/services/alertas.py`, se corren automáticamente
+al cargar cada `LecturaDiariaGalpon`/`LecturaDiariaGranja` (no hay que
+pedirlos aparte). Son de dos tipos distintos, porque la fuente de referencia
+es distinta:
+
+### Mortandad y agua (por galpón) — contra `Estandar`, por edad
+
+- **Mortandad crítica**: acumulado real ≥ 2× el esperado para esa edad →
+  "revisar galpón urgente".
+- **Mortandad de atención**: acumulado real ≥ 1.5× el esperado → alerta más
+  suave.
+- **Pico de mortandad diario**: la mortandad de un solo día ≥ 3× el
+  incremento esperado para esa edad, **aunque el acumulado todavía esté
+  dentro de lo normal**. Existe aparte del chequeo acumulado porque es la
+  señal temprana de un brote (objetivo explícito de la propuesta: "detectar
+  a tiempo la diferencia entre intervenir o perder un porcentaje
+  significativo de aves") — si solo se mirara el acumulado, un brote
+  agudo en un galpón grande tarda varios días en mover la aguja.
+- **Agua baja**: consumo real ≤ 70% del esperado → posible bebedero tapado
+  (riesgo serio: puede derivar en mortandad si no se corrige rápido).
+- **Agua alta**: consumo real ≥ 130% del esperado → posible pérdida/fuga en
+  la instalación, o estrés calórico/polidipsia por enfermedad.
+
+Los multiplicadores (1.5×, 2×, 3×, ±30%) son un punto de partida razonable
+(son los rangos típicos de tolerancia que se usan en monitoreo comercial de
+consumo de agua/alimento), no un valor validado estadísticamente con
+múltiples crianzas — el administrador puede ajustarlos con la experiencia de
+las próximas crianzas reales. Están como constantes al principio del
+archivo, no hardcodeados en la lógica, para que sea fácil tunearlos.
+
+### Gas y electricidad (de toda la granja) — sin estándar por edad
+
+A diferencia de mortandad/agua, acá **no hay un estándar por edad
+confiable**: el consumo de gas depende mucho más del clima/temporada que de
+la edad de las aves, y solo tenemos una crianza real de referencia —
+construir una curva por edad con un solo dato point sería sobreajustar al
+clima de esa crianza puntual. En cambio, se compara el consumo del día
+contra el **promedio móvil de los últimos 3 días de la misma crianza**, con
+una tolerancia de ±40%. Esto no detecta un problema estructural (ej. una
+caldera mal calibrada desde el día 1), pero sí detecta bien un cambio
+brusco puntual (fuga, equipo que quedó prendido, corte de circuito) — que es
+el caso de uso más urgente. Cuando haya varias crianzas históricas, esto se
+puede reemplazar por una curva real por edad+temporada, igual que se hizo
+con mortandad/agua.
 
 ### LecturaDiariaGalpon
 Lo que manda el granjero todos los días, por galpón. Reemplaza al

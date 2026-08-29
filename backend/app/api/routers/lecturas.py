@@ -14,6 +14,7 @@ from app.schemas.lectura import (
     LecturaDiariaGranjaCreate,
     LecturaDiariaGranjaOut,
 )
+from app.services.alertas import evaluar_lectura_galpon, evaluar_lectura_granja
 
 router = APIRouter(tags=["lecturas"])
 
@@ -83,6 +84,8 @@ def registrar_lectura_galpon(
         crianza_galpon_id=cg_id, cargado_por_id=usuario.id, **payload.model_dump()
     )
     db.add(lectura)
+    db.flush()  # asigna lectura.id sin cerrar la transacción, para poder linkear alertas
+    evaluar_lectura_galpon(db, lectura)
     db.commit()
     db.refresh(lectura)
     return lectura
@@ -138,6 +141,8 @@ def registrar_lectura_granja(
         crianza_id=crianza_id, cargado_por_id=usuario.id, **payload.model_dump()
     )
     db.add(lectura)
+    db.flush()
+    evaluar_lectura_granja(db, lectura)
     db.commit()
     db.refresh(lectura)
     return lectura

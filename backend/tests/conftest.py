@@ -33,3 +33,16 @@ def client():
 
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture()
+def db_session():
+    """Sesión directa contra la misma base SQLite en memoria, para tests que
+    trabajan con modelos sin pasar por la API (ej. tests de servicios)."""
+    Base.metadata.create_all(bind=engine)
+    db = TestingSessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+        Base.metadata.drop_all(bind=engine)
