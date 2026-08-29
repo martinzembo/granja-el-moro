@@ -40,6 +40,8 @@ pytest tests/test_auth.py::test_register_and_login  # un test puntual
 
 alembic revision --autogenerate -m "descripción"  # nueva migración tras cambiar un modelo
 alembic upgrade head                              # aplicar migraciones (requiere Postgres corriendo)
+
+python -m app.db.seed_estandares                  # siembra/actualiza la tabla estandares (mortandad/agua por día de vida)
 ```
 
 Setup completo (incluyendo `.env`) en [backend/README.md](backend/README.md).
@@ -54,13 +56,14 @@ Capas, de afuera hacia adentro:
   delgados: validan con el schema de Pydantic, hacen la operación de
   SQLAlchemy directo contra la sesión, devuelven. No hay capa de
   repositorio/service genérica — para este tamaño de proyecto se decidió no
-  agregarla. La única excepción es `app/services/calculos.py`: el cierre de
-  crianza (índice de crecimiento, conversión, índice de eficiencia,
-  liquidación) es lógica de negocio no trivial y verificada contra datos
-  reales, así que vive en un módulo aparte en vez de inline en
-  `routers/cierre.py`. Si otro endpoint empieza a acumular ese tipo de
-  lógica (ver Semana 3 del plan: alertas por desvío de `Estandar`), va en
-  `app/services/` también, no inline en el router.
+  agregarla. Las excepciones son `app/services/calculos.py` (el cierre de
+  crianza — índice de crecimiento, conversión, índice de eficiencia,
+  liquidación — verificado contra datos reales) y `app/services/alertas.py`
+  (umbrales de mortandad/agua/gas/electricidad, corren automáticamente al
+  cargar cada lectura desde `routers/lecturas.py`). Ambos son lógica de
+  negocio no trivial, así que viven en módulos aparte en vez de inline en el
+  router. Si otro endpoint empieza a acumular ese tipo de lógica, el mismo
+  criterio aplica: va en `app/services/`, no inline.
 - `app/api/deps.py` — dependencias de FastAPI compartidas: `get_current_user`
   decodifica el JWT contra la tabla `usuarios`; `require_role(*roles)` es una
   factory que devuelve una dependency para restringir un endpoint a roles
@@ -92,8 +95,13 @@ cualquier usuario autenticado y escritura restringida a admin).
 
 `tests/conftest.py` levanta una base SQLite en memoria y sobreescribe la
 dependency `get_db` de la app — los tests no requieren Postgres. Cada test
-recibe una base limpia (`create_all`/`drop_all` por fixture). Al agregar un
-router nuevo, seguir el patrón de `tests/test_auth.py` (fixture `client`).
+recibe una base limpia (`create_all`/`drop_all` por fixture). Dos fixtures:
+`client` (TestClient completo, para tests de endpoints — patrón en
+`tests/test_auth.py`) y `db_session` (sesión directa contra la misma base,
+para tests de servicios que arman sus propios modelos sin pasar por la API —
+patrón en `tests/test_alertas.py`). `tests/test_calculos.py` fija las
+fórmulas de cierre como regresión contra números reales verificados; si las
+tocás sin querer, se rompen ahí antes que en producción.
 
 ### Granularidad de la carga de datos (importante)
 
@@ -104,20 +112,41 @@ agua como lectura cruda de caudalímetro, no consumo ya calculado); gas y
 electricidad son **de toda la granja, diarias** (`LecturaDiariaGranja`, un
 solo medidor de cada uno); alimento y cáscara son **por evento** (remito,
 `EntregaInsumo`, no diario, no por galpón). Un galpón puede tener varias
-partidas de ingreso de aves con fechas/orígenes distintos (`IngresoAves`) —
-la edad de un galpón para comparar contra `Estandar` es un promedio
-ponderado por esas partidas (`edad_ponderada` en `app/services/calculos.py`),
-no una resta simple de fechas.
+partidas de ingreso de aves con fechas/orígenes distintos (`IngresoAves`).
+Ojo que "edad de un galpón" se calcula distinto en dos lugares por razones
+distintas: para las alertas del día a día (`app/services/alertas.py`) es
+`fecha - fecha del primer IngresoAves` (entero, simple, es como lo hace el
+Excel real mientras la crianza está en curso); para el cierre final
+(`app/services/calculos.py`) es un promedio ponderado por cantidad de aves
+de cada partida (`edad_ponderada`, fraccionario) — verificado exacto contra
+el Excel real. No usar uno en el lugar del otro.
+
+### Alertas
+
+`app/services/alertas.py` corre automáticamente al cargar cada lectura
+(`routers/lecturas.py` llama a `evaluar_lectura_galpon`/`evaluar_lectura_granja`
+después de un `db.flush()`, para tener el `id` de la lectura antes de linkear
+la `Alerta`). Mortandad y agua se comparan contra `Estandar` por edad
+(umbrales: 1.5×/2× acumulado, 3× pico diario, ±30% agua — justificados en
+docs/modelo-datos.md sección "Alertas"). Gas y electricidad **no** usan
+`Estandar` — no hay curva por edad confiable con una sola crianza de
+referencia y clima como variable no controlada, así que se comparan contra
+el promedio móvil de los últimos 3 días de la misma crianza (±40%). Los
+umbrales son constantes al principio del archivo, pensados para ajustarse
+con la experiencia de más crianzas reales, no para quedar fijos.
 
 ### Pendiente / decisiones abiertas
 
 Ver la sección final de [docs/modelo-datos.md](docs/modelo-datos.md). Lo más
 relevante: el reparto de alimento consumido por galpón es una aproximación
 (proporcional a aves×días, igual criterio que usa el Excel de la granja pero
-no idéntico bit a bit), y la tabla real de precio de liquidación
+no idéntico bit a bit), la tabla real de precio de liquidación
 (`indice_tabla` en `CierreCrianza`) es un dato de entrada manual — el
 administrador confirmó que ese cálculo lo hace la integradora con su propia
-fórmula interna, no se modela acá.
+fórmula interna, no se modela acá — y los umbrales de `app/services/alertas.py`
+están calibrados con una sola crianza real: van a necesitar ajuste (sobre
+todo gas/electricidad, que dependen de clima/temporada) a medida que se
+acumule historial de más crianzas.
 
 ## Mobile y Web
 

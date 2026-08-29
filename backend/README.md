@@ -29,6 +29,14 @@ Aplicar migraciones:
 alembic upgrade head
 ```
 
+Sembrar la tabla de estándares (mortandad/agua esperados por día de vida,
+usados por las alertas — ver [../docs/modelo-datos.md](../docs/modelo-datos.md)
+sección "Alertas"):
+
+```bash
+python -m app.db.seed_estandares
+```
+
 ## Correr el servidor
 
 ```bash
