@@ -8,15 +8,13 @@ No va inline en el router por la misma razón que app/services/calculos.py:
 es lógica de negocio no trivial.
 """
 
-from datetime import date
-
 from sqlalchemy.orm import Session
 
 from app.models.alerta import Alerta, TipoAlerta
 from app.models.estandar import Estandar
-from app.models.ingreso_aves import IngresoAves
 from app.models.lectura_diaria_galpon import LecturaDiariaGalpon
 from app.models.lectura_diaria_granja import LecturaDiariaGranja
+from app.services.aves import aves_netas_totales, edad_dias, mortandad_acumulada
 
 # Umbrales — justificados en docs/modelo-datos.md, sección "Alertas".
 MORTANDAD_ATENCION = 1.5  # acumulado 50% por encima del estándar
@@ -29,35 +27,6 @@ GRANJA_VENTANA_DIAS = 3
 FACTOR_CAUDALIMETRO = 10  # ver docs/modelo-datos.md, cálculo de consumo de agua
 
 
-def _edad_dias(db: Session, crianza_galpon_id: int, fecha: date) -> int | None:
-    ingresos = (
-        db.query(IngresoAves).filter(IngresoAves.crianza_galpon_id == crianza_galpon_id).all()
-    )
-    if not ingresos:
-        return None
-    fecha_ingreso = min(i.fecha for i in ingresos)
-    return (fecha - fecha_ingreso).days
-
-
-def _aves_netas_totales(db: Session, crianza_galpon_id: int) -> int:
-    ingresos = (
-        db.query(IngresoAves).filter(IngresoAves.crianza_galpon_id == crianza_galpon_id).all()
-    )
-    return sum(i.cantidad_neta for i in ingresos)
-
-
-def _mortandad_acumulada(db: Session, crianza_galpon_id: int, hasta_fecha: date) -> int:
-    filas = (
-        db.query(LecturaDiariaGalpon.mortandad)
-        .filter(
-            LecturaDiariaGalpon.crianza_galpon_id == crianza_galpon_id,
-            LecturaDiariaGalpon.fecha <= hasta_fecha,
-        )
-        .all()
-    )
-    return sum(m for (m,) in filas)
-
-
 def _chequear_mortandad(
     db: Session, lectura: LecturaDiariaGalpon, edad: int, aves_netas: int
 ) -> list[Alerta]:
@@ -65,7 +34,7 @@ def _chequear_mortandad(
     if not estandar_hoy or not aves_netas:
         return []
 
-    mortandad_acum = _mortandad_acumulada(db, lectura.crianza_galpon_id, lectura.fecha)
+    mortandad_acum = mortandad_acumulada(db, lectura.crianza_galpon_id, lectura.fecha)
     esperado_acum = float(estandar_hoy.mortandad_acumulada_esperada) * aves_netas
     alertas = []
 
@@ -129,7 +98,7 @@ def _chequear_agua(
     if consumo_litros < 0:
         return []  # lectura inconsistente (¿medidor cambiado?), no evaluar
 
-    mortandad_acum = _mortandad_acumulada(db, lectura.crianza_galpon_id, lectura.fecha)
+    mortandad_acum = mortandad_acumulada(db, lectura.crianza_galpon_id, lectura.fecha)
     aves_vivas = aves_netas - mortandad_acum
     esperado = float(estandar.agua_litros_pollo_esperado)
     if aves_vivas <= 0 or esperado <= 0:
@@ -160,10 +129,10 @@ def _chequear_agua(
 def evaluar_lectura_galpon(db: Session, lectura: LecturaDiariaGalpon) -> list[Alerta]:
     """Corre los chequeos de mortandad y agua para una lectura recién
     cargada, persiste las alertas que disparen y las devuelve."""
-    edad = _edad_dias(db, lectura.crianza_galpon_id, lectura.fecha)
+    edad = edad_dias(db, lectura.crianza_galpon_id, lectura.fecha)
     if edad is None:
         return []
-    aves_netas = _aves_netas_totales(db, lectura.crianza_galpon_id)
+    aves_netas = aves_netas_totales(db, lectura.crianza_galpon_id)
 
     disparadas = _chequear_mortandad(db, lectura, edad, aves_netas) + _chequear_agua(
         db, lectura, edad, aves_netas

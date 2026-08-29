@@ -2,11 +2,18 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_role
+from app.api.validaciones import (
+    requiere_crianza_en_curso,
+    requiere_fecha_no_anterior,
+    requiere_fecha_no_futura,
+)
 from app.db.session import get_db
+from app.models.crianza import Crianza
 from app.models.crianza_galpon import CrianzaGalpon
 from app.models.retiro_camion import RetiroCamion
 from app.models.usuario import RolUsuario, Usuario
 from app.schemas.retiro_camion import RetiroCamionCreate, RetiroCamionOut
+from app.services.aves import aves_vivas_disponibles, fecha_primer_ingreso
 
 router = APIRouter(prefix="/crianzas/{crianza_id}/galpones/{cg_id}/retiros", tags=["retiros"])
 
@@ -31,6 +38,23 @@ def registrar_retiro(
     admin: Usuario = Depends(require_role(RolUsuario.admin)),
 ):
     _get_crianza_galpon_o_404(db, crianza_id, cg_id)
+    crianza = db.get(Crianza, crianza_id)
+    requiere_crianza_en_curso(crianza)
+    requiere_fecha_no_futura(payload.fecha)
+    fecha_ingreso = fecha_primer_ingreso(db, cg_id)
+    if fecha_ingreso:
+        requiere_fecha_no_anterior(payload.fecha, fecha_ingreso, "el ingreso de las aves a este galpón")
+
+    disponibles = aves_vivas_disponibles(db, cg_id)
+    if payload.cantidad_aves > disponibles:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Este retiro ({payload.cantidad_aves} aves) supera las aves vivas "
+                f"disponibles en el galpón ({disponibles})"
+            ),
+        )
+
     retiro = RetiroCamion(
         crianza_galpon_id=cg_id, cargado_por_id=admin.id, **payload.model_dump()
     )

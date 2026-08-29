@@ -140,6 +140,11 @@ def cerrar_crianza(db: Session, crianza: Crianza, datos_liquidacion: CierreCrian
             .all()
         )
     )
+    if alimento_total_crianza <= 0:
+        raise ValueError(
+            "No hay entregas de alimento cargadas para esta crianza; no se puede calcular "
+            "la conversión ni el índice de eficiencia"
+        )
 
     datos_por_galpon = []
     for cg in crianza_galpones:

@@ -51,6 +51,12 @@ def test_flujo_completo_hasta_el_cierre(client):
         json={"fecha": "2024-01-01", "origen": "HC", "cantidad": 5238, "muertos_transporte": 7},
         headers=admin,
     )
+    client.post(
+        f"/crianzas/{crianza_id}/galpones/{cg_id}/ingresos",
+        json={"fecha": "2024-01-03", "origen": "Las Violetas", "cantidad": 5850, "muertos_transporte": 22},
+        headers=admin,
+    )
+    # Total neto del galpón: 10487 + 5231 + 5828 = 21546 (igual que el galpón 1 real).
 
     # El granjero asignado puede cargar la lectura diaria de su galpón...
     resp = client.post(
