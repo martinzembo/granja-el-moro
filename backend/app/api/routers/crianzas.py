@@ -2,9 +2,15 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_role
+from app.api.validaciones import (
+    requiere_crianza_en_curso,
+    requiere_fecha_no_anterior,
+    requiere_fecha_no_futura,
+)
 from app.db.session import get_db
 from app.models.crianza import Crianza
 from app.models.crianza_galpon import CrianzaGalpon
+from app.models.galpon import Galpon
 from app.models.ingreso_aves import IngresoAves
 from app.models.usuario import RolUsuario, Usuario
 from app.schemas.crianza import (
@@ -15,6 +21,7 @@ from app.schemas.crianza import (
     IngresoAvesCreate,
     IngresoAvesOut,
 )
+from app.services.aves import aves_netas_totales
 
 router = APIRouter(prefix="/crianzas", tags=["crianzas"])
 
@@ -61,6 +68,18 @@ def asignar_galpon(
     crianza = db.get(Crianza, crianza_id)
     if not crianza:
         raise HTTPException(status_code=404, detail="Crianza no encontrada")
+    requiere_crianza_en_curso(crianza)
+
+    ya_asignado = (
+        db.query(CrianzaGalpon)
+        .filter(
+            CrianzaGalpon.crianza_id == crianza_id,
+            CrianzaGalpon.galpon_id == payload.galpon_id,
+        )
+        .first()
+    )
+    if ya_asignado:
+        raise HTTPException(status_code=400, detail="Ese galpón ya está asignado a esta crianza")
 
     asignacion = CrianzaGalpon(crianza_id=crianza_id, **payload.model_dump())
     db.add(asignacion)
@@ -101,10 +120,32 @@ def registrar_ingreso(
     db: Session = Depends(get_db),
     _=Depends(require_role(RolUsuario.admin)),
 ):
-    _get_crianza_galpon_o_404(db, crianza_id, cg_id)
+    cg = _get_crianza_galpon_o_404(db, crianza_id, cg_id)
+    crianza = db.get(Crianza, crianza_id)
+    requiere_crianza_en_curso(crianza)
+    requiere_fecha_no_futura(payload.fecha)
+    requiere_fecha_no_anterior(payload.fecha, crianza.fecha_inicio, "el inicio de la crianza")
+
+    if payload.muertos_transporte > payload.cantidad:
+        raise HTTPException(
+            status_code=400, detail="Los muertos en transporte no pueden superar la cantidad despachada"
+        )
+
+    galpon = db.get(Galpon, cg.galpon_id)
+    total_previo = aves_netas_totales(db, cg_id)
+    cantidad_neta = payload.cantidad - payload.muertos_transporte
+    if total_previo + cantidad_neta > galpon.capacidad_maxima:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Este ingreso llevaría al galpón a {total_previo + cantidad_neta} aves, "
+                f"por encima de su capacidad máxima ({galpon.capacidad_maxima})"
+            ),
+        )
+
     ingreso = IngresoAves(
         crianza_galpon_id=cg_id,
-        cantidad_neta=payload.cantidad - payload.muertos_transporte,
+        cantidad_neta=cantidad_neta,
         **payload.model_dump(),
     )
     db.add(ingreso)

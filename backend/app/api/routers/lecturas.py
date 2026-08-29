@@ -2,6 +2,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user
+from app.api.validaciones import (
+    requiere_crianza_en_curso,
+    requiere_fecha_no_anterior,
+    requiere_fecha_no_futura,
+)
 from app.db.session import get_db
 from app.models.crianza import Crianza
 from app.models.crianza_galpon import CrianzaGalpon
@@ -15,6 +20,7 @@ from app.schemas.lectura import (
     LecturaDiariaGranjaOut,
 )
 from app.services.alertas import evaluar_lectura_galpon, evaluar_lectura_granja
+from app.services.aves import fecha_primer_ingreso
 
 router = APIRouter(tags=["lecturas"])
 
@@ -68,6 +74,13 @@ def registrar_lectura_galpon(
 ):
     cg = _get_crianza_galpon_o_404(db, crianza_id, cg_id)
     _requiere_granjero_del_galpon_o_admin(usuario, cg)
+
+    crianza = db.get(Crianza, crianza_id)
+    requiere_crianza_en_curso(crianza)
+    requiere_fecha_no_futura(payload.fecha)
+    fecha_ingreso = fecha_primer_ingreso(db, cg_id)
+    if fecha_ingreso:
+        requiere_fecha_no_anterior(payload.fecha, fecha_ingreso, "el ingreso de las aves a este galpón")
 
     ya_existe = (
         db.query(LecturaDiariaGalpon)
@@ -125,6 +138,9 @@ def registrar_lectura_granja(
     if not crianza:
         raise HTTPException(status_code=404, detail="Crianza no encontrada")
     _requiere_granjero_de_la_crianza_o_admin(db, usuario, crianza_id)
+    requiere_crianza_en_curso(crianza)
+    requiere_fecha_no_futura(payload.fecha)
+    requiere_fecha_no_anterior(payload.fecha, crianza.fecha_inicio, "el inicio de la crianza")
 
     ya_existe = (
         db.query(LecturaDiariaGranja)

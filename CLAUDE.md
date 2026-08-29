@@ -101,7 +101,10 @@ recibe una base limpia (`create_all`/`drop_all` por fixture). Dos fixtures:
 para tests de servicios que arman sus propios modelos sin pasar por la API —
 patrón en `tests/test_alertas.py`). `tests/test_calculos.py` fija las
 fórmulas de cierre como regresión contra números reales verificados; si las
-tocás sin querer, se rompen ahí antes que en producción.
+tocás sin querer, se rompen ahí antes que en producción. `tests/test_validaciones.py`
+cubre las guardas de integridad (crianza cerrada, capacidad de galpón, aves
+vivas disponibles, fechas) — al agregar una guarda nueva en un router, sumar
+el caso ahí también.
 
 ### Granularidad de la carga de datos (importante)
 
@@ -114,12 +117,16 @@ solo medidor de cada uno); alimento y cáscara son **por evento** (remito,
 `EntregaInsumo`, no diario, no por galpón). Un galpón puede tener varias
 partidas de ingreso de aves con fechas/orígenes distintos (`IngresoAves`).
 Ojo que "edad de un galpón" se calcula distinto en dos lugares por razones
-distintas: para las alertas del día a día (`app/services/alertas.py`) es
-`fecha - fecha del primer IngresoAves` (entero, simple, es como lo hace el
-Excel real mientras la crianza está en curso); para el cierre final
-(`app/services/calculos.py`) es un promedio ponderado por cantidad de aves
-de cada partida (`edad_ponderada`, fraccionario) — verificado exacto contra
-el Excel real. No usar uno en el lugar del otro.
+distintas: para las alertas y validaciones del día a día (`edad_dias` en
+`app/services/aves.py`) es `fecha - fecha del primer IngresoAves` (entero,
+simple, es como lo hace el Excel real mientras la crianza está en curso);
+para el cierre final (`edad_ponderada` en `app/services/calculos.py`) es un
+promedio ponderado por cantidad de aves de cada partida (fraccionario) —
+verificado exacto contra el Excel real. No usar uno en el lugar del otro.
+`app/services/aves.py` también tiene `aves_netas_totales`, `mortandad_acumulada`
+y `aves_vivas_disponibles` — consultas chicas que se repiten entre alertas,
+cierre y las validaciones de los routers; están ahí para no recalcularlas
+distinto en cada lugar.
 
 ### Alertas
 
@@ -134,6 +141,21 @@ referencia y clima como variable no controlada, así que se comparan contra
 el promedio móvil de los últimos 3 días de la misma crianza (±40%). Los
 umbrales son constantes al principio del archivo, pensados para ajustarse
 con la experiencia de más crianzas reales, no para quedar fijos.
+
+### Validaciones
+
+`app/api/validaciones.py` tiene las guardas de integridad que se repiten
+entre routers (`requiere_crianza_en_curso`, `requiere_fecha_no_futura`,
+`requiere_fecha_no_anterior`) — levantan `HTTPException` directo, por eso
+viven en `app/api/` y no en `app/services/` (son chequeos triviales de
+integridad de datos, no cálculos de negocio). Reglas que sí son específicas
+de un router quedan inline ahí (ej. capacidad máxima del galpón al cargar un
+`IngresoAves` en `routers/crianzas.py`, o que un `RetiroCamion` no supere
+`aves_vivas_disponibles` en `routers/retiros.py`). Una vez que una crianza
+pasa a `cerrada`, ningún endpoint de carga (ingresos, lecturas, entregas,
+retiros) acepta escrituras nuevas para esa crianza — ver
+`tests/test_validaciones.py` para el catálogo completo de lo que se
+rechaza y por qué.
 
 ### Pendiente / decisiones abiertas
 
