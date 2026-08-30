@@ -4,4 +4,10 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Solo en debug: permite hablar por HTTP (no HTTPS) con el backend
+         local vía "adb reverse tcp:8000 tcp:8000" — ver CLAUDE.md, sección
+         Mobile. El build de release NO hereda esto, así que producción va
+         a requerir HTTPS de verdad contra el backend desplegado. -->
+    <application android:usesCleartextTraffic="true" />
 </manifest>
