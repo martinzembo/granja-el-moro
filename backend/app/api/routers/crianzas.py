@@ -26,6 +26,19 @@ from app.services.aves import aves_netas_totales
 router = APIRouter(prefix="/crianzas", tags=["crianzas"])
 
 
+def _cg_out(db: Session, cg: CrianzaGalpon) -> CrianzaGalponOut:
+    galpon = db.get(Galpon, cg.galpon_id)
+    granjero = db.get(Usuario, cg.granjero_id)
+    return CrianzaGalponOut(
+        id=cg.id,
+        crianza_id=cg.crianza_id,
+        galpon_id=cg.galpon_id,
+        galpon_nombre=galpon.nombre,
+        granjero_id=cg.granjero_id,
+        granjero_nombre=granjero.nombre,
+    )
+
+
 @router.get("", response_model=list[CrianzaOut])
 def listar(db: Session = Depends(get_db), _=Depends(get_current_user)):
     return db.query(Crianza).all()
@@ -85,16 +98,15 @@ def asignar_galpon(
     db.add(asignacion)
     db.commit()
     db.refresh(asignacion)
-    return asignacion
+    return _cg_out(db, asignacion)
 
 
 @router.get("/{crianza_id}/galpones", response_model=list[CrianzaGalponOut])
 def listar_galpones_asignados(
     crianza_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)
 ):
-    return (
-        db.query(CrianzaGalpon).filter(CrianzaGalpon.crianza_id == crianza_id).all()
-    )
+    asignaciones = db.query(CrianzaGalpon).filter(CrianzaGalpon.crianza_id == crianza_id).all()
+    return [_cg_out(db, cg) for cg in asignaciones]
 
 
 def _get_crianza_galpon_o_404(db: Session, crianza_id: int, cg_id: int) -> CrianzaGalpon:

@@ -36,6 +36,14 @@ def test_flujo_completo_hasta_el_cierre(client):
         headers=admin,
     ).json()
     cg_id = cg["id"]
+    # La app admin necesita los nombres resueltos, no solo los ids (ver
+    # app/api/routers/crianzas.py `_cg_out`).
+    assert cg["galpon_nombre"] == "Galpón 1"
+    assert cg["granjero_nombre"] == "granjero@granjaelmoro.com.ar"
+
+    listado = client.get(f"/crianzas/{crianza_id}/galpones", headers=admin).json()
+    assert listado[0]["galpon_nombre"] == "Galpón 1"
+    assert listado[0]["granjero_nombre"] == "granjero@granjaelmoro.com.ar"
 
     # Dos partidas de origen distinto el mismo día -> igual que el caso real.
     resp = client.post(
