@@ -63,7 +63,9 @@ class _GranjeroHomeScreenState extends State<GranjeroHomeScreen> {
   }
 
   Future<void> _refrescar() async {
-    setState(() => _asignaciones = _cargarAsignaciones());
+    setState(() {
+      _asignaciones = _cargarAsignaciones();
+    });
     await _asignaciones;
   }
 

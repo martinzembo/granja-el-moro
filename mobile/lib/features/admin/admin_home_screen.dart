@@ -28,7 +28,9 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
   }
 
   Future<void> _refrescar() async {
-    setState(() => _crianzas = _api.crianzas());
+    setState(() {
+      _crianzas = _api.crianzas();
+    });
     await _crianzas;
   }
 
