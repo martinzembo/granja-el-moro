@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 
-from app.api.routers import alertas, auth, cierre, crianzas, galpones, insumos, lecturas, retiros
+from app.api.routers import alertas, auth, cierre, crianzas, galpones, insumos, lecturas, me, retiros
 
 app = FastAPI(title="Granja El Moro API")
 
@@ -12,6 +12,7 @@ app.include_router(insumos.router)
 app.include_router(retiros.router)
 app.include_router(cierre.router)
 app.include_router(alertas.router)
+app.include_router(me.router)
 
 
 @app.get("/health")
