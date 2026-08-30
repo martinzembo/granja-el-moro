@@ -230,3 +230,15 @@ def test_retiros_requiere_admin(client):
     resp = client.get(f"/crianzas/{crianza_id}/galpones/{cg_id}/retiros", headers=granjero)
     assert resp.status_code == 200
     assert len(resp.json()) == 1
+
+
+def test_get_cierre_antes_de_cerrar_da_404(client):
+    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
+    crianza_id, _, _ = _armar_crianza_con_galpon(client, admin)
+
+    resp = client.get(f"/crianzas/{crianza_id}/cierre", headers=admin)
+    assert resp.status_code == 404
+
+    resp = client.get(f"/crianzas/{crianza_id}/cierre/galpones", headers=admin)
+    assert resp.status_code == 200
+    assert resp.json() == []
