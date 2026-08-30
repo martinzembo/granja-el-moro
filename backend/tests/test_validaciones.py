@@ -50,6 +50,58 @@ def test_no_se_puede_asignar_el_mismo_galpon_dos_veces(client):
     assert resp.status_code == 400
 
 
+def test_no_se_puede_asignar_galpon_ya_en_uso_en_otra_crianza_en_curso(client):
+    """Un galpón físico no puede estar corriendo dos crianzas a la vez,
+    aunque sean crianzas distintas."""
+    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
+    crianza1_id, galpon_id, cg1_id = _armar_crianza_con_galpon(client, admin)
+
+    granjero2_id = client.get(
+        "/auth/me", headers=_registrar_y_loguear(client, "granjero2@granjaelmoro.com.ar", "granjero")
+    ).json()["id"]
+    crianza2_id = client.post(
+        "/crianzas", json={"numero": 2, "fecha_inicio": "2024-01-01"}, headers=admin
+    ).json()["id"]
+
+    resp = client.post(
+        f"/crianzas/{crianza2_id}/galpones",
+        json={"galpon_id": galpon_id, "granjero_id": granjero2_id},
+        headers=admin,
+    )
+    assert resp.status_code == 400
+    assert "en curso" in resp.text
+
+    # Si la primera crianza se cierra, el galpón queda libre para la segunda.
+    client.post(
+        f"/crianzas/{crianza1_id}/galpones/{cg1_id}/ingresos",
+        json={"fecha": "2024-01-01", "origen": "Test", "cantidad": 1000, "muertos_transporte": 0},
+        headers=admin,
+    )
+    client.post(
+        f"/crianzas/{crianza1_id}/galpones/{cg1_id}/retiros",
+        json={"fecha": "2024-01-10", "remito": "1", "transportista": "X", "cantidad_aves": 1000, "peso_neto": 3000},
+        headers=admin,
+    )
+    client.post(
+        f"/crianzas/{crianza1_id}/entregas",
+        json={"tipo_insumo": "alimento", "fecha": "2024-01-05", "remito": "1", "kilos": 2000},
+        headers=admin,
+    )
+    cierre = client.post(
+        f"/crianzas/{crianza1_id}/cierre",
+        json={"fecha_cierre": "2024-01-10", "indice_tabla": 100, "premios": 0, "gas_ajuste": 0, "ajuste": 0},
+        headers=admin,
+    )
+    assert cierre.status_code == 201, cierre.text
+
+    resp = client.post(
+        f"/crianzas/{crianza2_id}/galpones",
+        json={"galpon_id": galpon_id, "granjero_id": granjero2_id},
+        headers=admin,
+    )
+    assert resp.status_code == 201, resp.text
+
+
 def test_ingreso_no_puede_superar_capacidad_del_galpon(client):
     admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
     crianza_id, _, cg_id = _armar_crianza_con_galpon(client, admin)

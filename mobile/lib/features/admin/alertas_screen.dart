@@ -28,7 +28,9 @@ class _AlertasScreenState extends State<AlertasScreen> {
   }
 
   Future<void> _refrescar() async {
-    setState(() => _alertas = _api.alertas(widget.crianzaId));
+    setState(() {
+      _alertas = _api.alertas(widget.crianzaId);
+    });
     await _alertas;
   }
 

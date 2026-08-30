@@ -8,7 +8,7 @@ from app.api.validaciones import (
     requiere_fecha_no_futura,
 )
 from app.db.session import get_db
-from app.models.crianza import Crianza
+from app.models.crianza import Crianza, EstadoCrianza
 from app.models.crianza_galpon import CrianzaGalpon
 from app.models.galpon import Galpon
 from app.models.ingreso_aves import IngresoAves
@@ -93,6 +93,27 @@ def asignar_galpon(
     )
     if ya_asignado:
         raise HTTPException(status_code=400, detail="Ese galpón ya está asignado a esta crianza")
+
+    # Un galpón físico no puede estar corriendo dos crianzas en curso al
+    # mismo tiempo, aunque sean crianzas distintas.
+    en_uso_en_otra_crianza = (
+        db.query(CrianzaGalpon, Crianza)
+        .join(Crianza, CrianzaGalpon.crianza_id == Crianza.id)
+        .filter(
+            CrianzaGalpon.galpon_id == payload.galpon_id,
+            Crianza.estado == EstadoCrianza.en_curso,
+        )
+        .first()
+    )
+    if en_uso_en_otra_crianza:
+        _, crianza_en_uso = en_uso_en_otra_crianza
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Ese galpón ya está en uso en la crianza #{crianza_en_uso.numero}, "
+                "que sigue en curso"
+            ),
+        )
 
     asignacion = CrianzaGalpon(crianza_id=crianza_id, **payload.model_dump())
     db.add(asignacion)
