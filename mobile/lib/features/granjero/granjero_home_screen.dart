@@ -8,9 +8,13 @@ import 'granjero_models.dart';
 import 'lectura_galpon_form_screen.dart';
 import 'lectura_granja_form_screen.dart';
 
-/// Punto de entrada del flujo del granjero: mortandad + agua de su galpón,
-/// y gas/electricidad de toda la granja, ambas con carga diaria (ver
+/// Punto de entrada del flujo del granjero: mortandad + agua del galpón a
+/// cargo, y gas/electricidad de toda la granja, ambas con carga diaria (ver
 /// docs/plan.md Semana 4-5).
+///
+/// Un granjero normalmente maneja un solo galpón, pero el modelo no lo
+/// obliga (ver app/schemas/asignacion.py) — si tiene más de uno asignado en
+/// una crianza en curso, se muestra un selector para elegir cuál cargar.
 class GranjeroHomeScreen extends StatefulWidget {
   const GranjeroHomeScreen({super.key});
 
@@ -27,7 +31,8 @@ class _EstadoDia {
 class _GranjeroHomeScreenState extends State<GranjeroHomeScreen> {
   late GranjeroApi _api;
   late Future<List<Asignacion>> _asignaciones;
-  Asignacion? _asignacionActiva;
+  List<Asignacion> _enCurso = [];
+  Asignacion? _seleccionada;
   _EstadoDia _estadoDia = _EstadoDia();
   bool _cargandoEstadoDia = false;
 
@@ -40,10 +45,14 @@ class _GranjeroHomeScreenState extends State<GranjeroHomeScreen> {
 
   Future<List<Asignacion>> _cargarAsignaciones() async {
     final asignaciones = await _api.misAsignaciones();
-    final activa = asignaciones.where((a) => a.enCurso).firstOrNull;
-    _asignacionActiva = activa;
-    if (activa != null) {
-      await _cargarEstadoDelDia(activa);
+    _enCurso = asignaciones.where((a) => a.enCurso).toList();
+    // Si la selección previa ya no es válida (o no hay ninguna todavía),
+    // se cae a la primera de la lista.
+    final actual = _seleccionada;
+    final sigueValida = actual != null && _enCurso.any((a) => a.crianzaGalponId == actual.crianzaGalponId);
+    _seleccionada = sigueValida ? actual : (_enCurso.isEmpty ? null : _enCurso.first);
+    if (_seleccionada != null) {
+      await _cargarEstadoDelDia(_seleccionada!);
     }
     return asignaciones;
   }
@@ -60,6 +69,11 @@ class _GranjeroHomeScreenState extends State<GranjeroHomeScreen> {
       );
       _cargandoEstadoDia = false;
     });
+  }
+
+  Future<void> _elegir(Asignacion asignacion) async {
+    setState(() => _seleccionada = asignacion);
+    await _cargarEstadoDelDia(asignacion);
   }
 
   Future<void> _refrescar() async {
@@ -90,7 +104,7 @@ class _GranjeroHomeScreenState extends State<GranjeroHomeScreen> {
             if (snapshot.hasError) {
               return _mensajeCentrado('No se pudo cargar tu información. Deslizá para reintentar.');
             }
-            final asignacion = _asignacionActiva;
+            final asignacion = _seleccionada;
             if (asignacion == null) {
               return _mensajeCentrado('Todavía no tenés un galpón asignado en una crianza en curso.');
             }
@@ -123,10 +137,23 @@ class _GranjeroHomeScreenState extends State<GranjeroHomeScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: [
-        Text(
-          '${asignacion.galponNombre} — Crianza #${asignacion.crianzaNumero}',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        if (_enCurso.length > 1) ...[
+          DropdownButtonFormField<Asignacion>(
+            initialValue: asignacion,
+            decoration: const InputDecoration(labelText: 'Galpón', border: OutlineInputBorder()),
+            items: _enCurso
+                .map((a) => DropdownMenuItem(value: a, child: Text('${a.galponNombre} — Crianza #${a.crianzaNumero}')))
+                .toList(),
+            onChanged: (a) {
+              if (a != null) _elegir(a);
+            },
+          ),
+          const SizedBox(height: 16),
+        ] else
+          Text(
+            '${asignacion.galponNombre} — Crianza #${asignacion.crianzaNumero}',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
         const SizedBox(height: 16),
         if (_cargandoEstadoDia)
           const Center(child: Padding(padding: EdgeInsets.all(16), child: CircularProgressIndicator()))
@@ -176,8 +203,4 @@ class _GranjeroHomeScreenState extends State<GranjeroHomeScreen> {
       ),
     );
   }
-}
-
-extension<T> on Iterable<T> {
-  T? get firstOrNull => isEmpty ? null : first;
 }
