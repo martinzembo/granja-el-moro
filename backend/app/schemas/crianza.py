@@ -27,12 +27,17 @@ class CrianzaGalponCreate(BaseModel):
 
 
 class CrianzaGalponOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    """No usa from_attributes: se arma a mano en el router con un join a
+    Galpon/Usuario (ver app/api/routers/crianzas.py), porque CrianzaGalpon
+    no tiene relationships de SQLAlchemy (convención del proyecto, ver
+    CLAUDE.md) y la app necesita los nombres, no solo los ids."""
 
     id: int
     crianza_id: int
     galpon_id: int
+    galpon_nombre: str
     granjero_id: int
+    granjero_nombre: str
 
 
 class IngresoAvesCreate(BaseModel):
