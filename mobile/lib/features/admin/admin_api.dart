@@ -70,6 +70,77 @@ class AdminApi {
     });
   }
 
+  Future<List<RetiroCamion>> retiros(int crianzaId, int cgId) async {
+    final data = await _client.get('/crianzas/$crianzaId/galpones/$cgId/retiros') as List;
+    return data.map((e) => RetiroCamion.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> registrarRetiro({
+    required int crianzaId,
+    required int cgId,
+    required DateTime fecha,
+    required String remito,
+    required String transportista,
+    required int cantidadAves,
+    required double pesoNeto,
+  }) {
+    return _client.post('/crianzas/$crianzaId/galpones/$cgId/retiros', {
+      'fecha': formatoFecha(fecha),
+      'remito': remito,
+      'transportista': transportista,
+      'cantidad_aves': cantidadAves,
+      'peso_neto': pesoNeto,
+    });
+  }
+
+  Future<List<EntregaInsumo>> entregas(int crianzaId) async {
+    final data = await _client.get('/crianzas/$crianzaId/entregas') as List;
+    return data.map((e) => EntregaInsumo.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> registrarEntregaAlimento({
+    required int crianzaId,
+    required DateTime fecha,
+    required String remito,
+    required double kilos,
+  }) {
+    return _client.post('/crianzas/$crianzaId/entregas', {
+      'tipo_insumo': 'alimento',
+      'fecha': formatoFecha(fecha),
+      'remito': remito,
+      'kilos': kilos,
+    });
+  }
+
+  /// null si la crianza todavía no tiene liquidación (backend responde 404).
+  Future<CierreCrianza?> cierre(int crianzaId) async {
+    try {
+      final data = await _client.get('/crianzas/$crianzaId/cierre');
+      return CierreCrianza.fromJson(data as Map<String, dynamic>);
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  Future<CierreCrianza> cerrarCrianza({
+    required int crianzaId,
+    required DateTime fechaCierre,
+    required double indiceTabla,
+    required double premios,
+    required double gasAjuste,
+    required double ajuste,
+  }) async {
+    final data = await _client.post('/crianzas/$crianzaId/cierre', {
+      'fecha_cierre': formatoFecha(fechaCierre),
+      'indice_tabla': indiceTabla,
+      'premios': premios,
+      'gas_ajuste': gasAjuste,
+      'ajuste': ajuste,
+    });
+    return CierreCrianza.fromJson(data as Map<String, dynamic>);
+  }
+
   Future<List<Alerta>> alertas(int crianzaId, {bool? resuelta}) async {
     final query = resuelta == null ? '' : '?resuelta=$resuelta';
     final data = await _client.get('/crianzas/$crianzaId/alertas$query') as List;

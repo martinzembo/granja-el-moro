@@ -146,6 +146,17 @@ def test_flujo_completo_hasta_el_cierre(client):
     assert cierre["precio_x_pollo"] == 850.0
     assert cierre["monto_total"] == 850.0 * 18986
 
+    # La liquidación queda consultable después (para la pantalla de la app).
+    resp = client.get(f"/crianzas/{crianza_id}/cierre", headers=admin)
+    assert resp.status_code == 200
+    assert resp.json()["monto_total"] == 850.0 * 18986
+
+    resp = client.get(f"/crianzas/{crianza_id}/cierre/galpones", headers=admin)
+    assert resp.status_code == 200
+    detalle = resp.json()
+    assert len(detalle) == 1
+    assert detalle[0]["crianza_galpon_id"] == cg_id
+
     # No se puede cerrar dos veces.
     resp = client.post(
         f"/crianzas/{crianza_id}/cierre",

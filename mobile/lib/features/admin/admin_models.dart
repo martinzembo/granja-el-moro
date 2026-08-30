@@ -118,6 +118,97 @@ class Alerta {
   }
 }
 
+class RetiroCamion {
+  RetiroCamion({
+    required this.fecha,
+    required this.remito,
+    required this.transportista,
+    required this.cantidadAves,
+    required this.pesoNeto,
+  });
+
+  final DateTime fecha;
+  final String remito;
+  final String transportista;
+  final int cantidadAves;
+  final double pesoNeto;
+
+  factory RetiroCamion.fromJson(Map<String, dynamic> json) {
+    return RetiroCamion(
+      fecha: DateTime.parse(json['fecha'] as String),
+      remito: json['remito'] as String,
+      transportista: json['transportista'] as String,
+      cantidadAves: json['cantidad_aves'] as int,
+      pesoNeto: (json['peso_neto'] as num).toDouble(),
+    );
+  }
+}
+
+class EntregaInsumo {
+  EntregaInsumo({
+    required this.tipoInsumo,
+    required this.fecha,
+    required this.remito,
+    required this.kilos,
+  });
+
+  final String tipoInsumo;
+  final DateTime fecha;
+  final String remito;
+  final double kilos;
+
+  factory EntregaInsumo.fromJson(Map<String, dynamic> json) {
+    return EntregaInsumo(
+      tipoInsumo: json['tipo_insumo'] as String,
+      fecha: DateTime.parse(json['fecha'] as String),
+      remito: json['remito'] as String,
+      kilos: (json['kilos'] as num).toDouble(),
+    );
+  }
+}
+
+/// Espejo de `CierreCrianzaOut` — la liquidación final de la crianza.
+class CierreCrianza {
+  CierreCrianza({
+    required this.totalAvesEntregadas,
+    required this.pesoTotal,
+    required this.iePromedio,
+    required this.indiceTabla,
+    required this.premios,
+    required this.gasAjuste,
+    required this.ajuste,
+    required this.precioXPollo,
+    required this.montoTotal,
+    required this.fechaCierre,
+  });
+
+  final int totalAvesEntregadas;
+  final double pesoTotal;
+  final double iePromedio;
+  final double indiceTabla;
+  final double premios;
+  final double gasAjuste;
+  final double ajuste;
+  final double precioXPollo;
+  final double montoTotal;
+  final DateTime fechaCierre;
+
+  factory CierreCrianza.fromJson(Map<String, dynamic> json) {
+    return CierreCrianza(
+      totalAvesEntregadas: json['total_aves_entregadas'] as int,
+      pesoTotal: (json['peso_total'] as num).toDouble(),
+      iePromedio: (json['ie_promedio'] as num).toDouble(),
+      indiceTabla: (json['indice_tabla'] as num).toDouble(),
+      premios: (json['premios'] as num).toDouble(),
+      gasAjuste: (json['gas_ajuste'] as num).toDouble(),
+      ajuste: (json['ajuste'] as num).toDouble(),
+      precioXPollo: (json['precio_x_pollo'] as num).toDouble(),
+      montoTotal: (json['monto_total'] as num).toDouble(),
+      fechaCierre: DateTime.parse(json['fecha_cierre'] as String),
+    );
+  }
+}
+
 /// Reexporta Usuario/RolUsuario para no repetir el import en cada pantalla
 /// de admin que necesita elegir un granjero.
 typedef Granjero = Usuario;
