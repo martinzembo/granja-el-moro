@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_service.dart';
+import '../../core/validadores.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -68,7 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     keyboardType: TextInputType.emailAddress,
                     autocorrect: false,
                     decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
-                    validator: (v) => (v == null || v.isEmpty) ? 'Ingresá tu email' : null,
+                    validator: validarEmail,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(

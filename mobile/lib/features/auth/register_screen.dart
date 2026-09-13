@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_service.dart';
+import '../../core/validadores.dart';
 
 /// Registro público — siempre crea un granjero (ver AuthService.registrarGranjero
 /// y docs/modelo-datos.md: el rol admin no se autoregistra). Al confirmar,
@@ -23,8 +24,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _passwordVisible = false;
   bool _confirmarVisible = false;
   bool _registrando = false;
-
-  static final _emailRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
 
   @override
   void dispose() {
@@ -97,11 +96,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     keyboardType: TextInputType.emailAddress,
                     autocorrect: false,
                     decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'Ingresá tu email';
-                      if (!_emailRegex.hasMatch(v.trim())) return 'Ese email no parece válido';
-                      return null;
-                    },
+                    validator: validarEmail,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
