@@ -44,7 +44,22 @@ class ApiClient {
     try {
       final data = jsonDecode(utf8.decode(resp.bodyBytes));
       if (data is Map && data['detail'] != null) {
-        mensaje = data['detail'].toString();
+        final detail = data['detail'];
+        if (detail is String) {
+          // Los errores "de negocio" (HTTPException) vienen así, ya en
+          // español — se muestran tal cual.
+          mensaje = detail;
+        } else if (detail is List && detail.isNotEmpty) {
+          // Errores de validación de Pydantic: una lista de objetos con
+          // "msg" (en inglés, sin traducir — son casos que ya deberían
+          // haberse frenado con la validación del lado del formulario).
+          final primero = detail.first;
+          mensaje = primero is Map && primero['msg'] != null
+              ? primero['msg'].toString()
+              : detail.toString();
+        } else {
+          mensaje = detail.toString();
+        }
       }
     } catch (_) {
       // el body no era JSON, nos quedamos con el mensaje genérico

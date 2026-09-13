@@ -1,23 +1,13 @@
-def _registrar_y_loguear(client, email, rol, password="clave1234"):
-    client.post(
-        "/auth/register",
-        json={"nombre": email, "email": email, "password": password, "rol": rol},
-    )
-    login = client.post("/auth/login", json={"email": email, "password": password})
-    token = login.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
-
-
-def test_listar_usuarios_requiere_admin(client):
-    granjero = _registrar_y_loguear(client, "granjero@granjaelmoro.com.ar", "granjero")
+def test_listar_usuarios_requiere_admin(client, crear_usuario):
+    granjero = crear_usuario("granjero@granjaelmoro.com.ar", "granjero")
     resp = client.get("/usuarios", headers=granjero)
     assert resp.status_code == 403
 
 
-def test_listar_usuarios_filtrado_por_rol(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    _registrar_y_loguear(client, "granjero1@granjaelmoro.com.ar", "granjero")
-    _registrar_y_loguear(client, "granjero2@granjaelmoro.com.ar", "granjero")
+def test_listar_usuarios_filtrado_por_rol(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    crear_usuario("granjero1@granjaelmoro.com.ar", "granjero")
+    crear_usuario("granjero2@granjaelmoro.com.ar", "granjero")
 
     resp = client.get("/usuarios?rol=granjero", headers=admin)
     assert resp.status_code == 200

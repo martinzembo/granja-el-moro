@@ -7,19 +7,9 @@ feliz completo.
 from datetime import date, timedelta
 
 
-def _registrar_y_loguear(client, email, rol, password="clave1234"):
-    client.post(
-        "/auth/register",
-        json={"nombre": email, "email": email, "password": password, "rol": rol},
-    )
-    login = client.post("/auth/login", json={"email": email, "password": password})
-    token = login.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
-
-
-def _armar_crianza_con_galpon(client, admin, fecha_inicio="2024-01-01"):
+def _armar_crianza_con_galpon(client, crear_usuario, admin, fecha_inicio="2024-01-01"):
     granjero_id = client.get(
-        "/auth/me", headers=_registrar_y_loguear(client, "granjero@granjaelmoro.com.ar", "granjero")
+        "/auth/me", headers=crear_usuario("granjero@granjaelmoro.com.ar", "granjero")
     ).json()["id"]
     galpon_id = client.post(
         "/galpones", json={"nombre": "Galpón 1", "capacidad_maxima": 20000}, headers=admin
@@ -35,12 +25,12 @@ def _armar_crianza_con_galpon(client, admin, fecha_inicio="2024-01-01"):
     return crianza_id, galpon_id, cg_id
 
 
-def test_no_se_puede_asignar_el_mismo_galpon_dos_veces(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    crianza_id, galpon_id, _ = _armar_crianza_con_galpon(client, admin)
+def test_no_se_puede_asignar_el_mismo_galpon_dos_veces(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    crianza_id, galpon_id, _ = _armar_crianza_con_galpon(client, crear_usuario, admin)
 
     otro_granjero_id = client.get(
-        "/auth/me", headers=_registrar_y_loguear(client, "granjero2@granjaelmoro.com.ar", "granjero")
+        "/auth/me", headers=crear_usuario("granjero2@granjaelmoro.com.ar", "granjero")
     ).json()["id"]
     resp = client.post(
         f"/crianzas/{crianza_id}/galpones",
@@ -50,14 +40,14 @@ def test_no_se_puede_asignar_el_mismo_galpon_dos_veces(client):
     assert resp.status_code == 400
 
 
-def test_no_se_puede_asignar_galpon_ya_en_uso_en_otra_crianza_en_curso(client):
+def test_no_se_puede_asignar_galpon_ya_en_uso_en_otra_crianza_en_curso(client, crear_usuario):
     """Un galpón físico no puede estar corriendo dos crianzas a la vez,
     aunque sean crianzas distintas."""
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    crianza1_id, galpon_id, cg1_id = _armar_crianza_con_galpon(client, admin)
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    crianza1_id, galpon_id, cg1_id = _armar_crianza_con_galpon(client, crear_usuario, admin)
 
     granjero2_id = client.get(
-        "/auth/me", headers=_registrar_y_loguear(client, "granjero2@granjaelmoro.com.ar", "granjero")
+        "/auth/me", headers=crear_usuario("granjero2@granjaelmoro.com.ar", "granjero")
     ).json()["id"]
     crianza2_id = client.post(
         "/crianzas", json={"numero": 2, "fecha_inicio": "2024-01-01"}, headers=admin
@@ -102,9 +92,9 @@ def test_no_se_puede_asignar_galpon_ya_en_uso_en_otra_crianza_en_curso(client):
     assert resp.status_code == 201, resp.text
 
 
-def test_ingreso_no_puede_superar_capacidad_del_galpon(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, admin)
+def test_ingreso_no_puede_superar_capacidad_del_galpon(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, crear_usuario, admin)
 
     resp = client.post(
         f"/crianzas/{crianza_id}/galpones/{cg_id}/ingresos",
@@ -115,9 +105,9 @@ def test_ingreso_no_puede_superar_capacidad_del_galpon(client):
     assert "capacidad" in resp.text
 
 
-def test_muertos_transporte_no_puede_superar_cantidad(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, admin)
+def test_muertos_transporte_no_puede_superar_cantidad(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, crear_usuario, admin)
 
     resp = client.post(
         f"/crianzas/{crianza_id}/galpones/{cg_id}/ingresos",
@@ -127,9 +117,9 @@ def test_muertos_transporte_no_puede_superar_cantidad(client):
     assert resp.status_code == 400
 
 
-def test_ingreso_no_puede_ser_anterior_al_inicio_de_la_crianza(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, admin, fecha_inicio="2024-01-10")
+def test_ingreso_no_puede_ser_anterior_al_inicio_de_la_crianza(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, crear_usuario, admin, fecha_inicio="2024-01-10")
 
     resp = client.post(
         f"/crianzas/{crianza_id}/galpones/{cg_id}/ingresos",
@@ -139,10 +129,10 @@ def test_ingreso_no_puede_ser_anterior_al_inicio_de_la_crianza(client):
     assert resp.status_code == 400
 
 
-def test_ingreso_no_puede_ser_en_el_futuro(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
+def test_ingreso_no_puede_ser_en_el_futuro(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
     manana = (date.today() + timedelta(days=1)).isoformat()
-    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, admin, fecha_inicio="2024-01-01")
+    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, crear_usuario, admin, fecha_inicio="2024-01-01")
 
     resp = client.post(
         f"/crianzas/{crianza_id}/galpones/{cg_id}/ingresos",
@@ -152,9 +142,9 @@ def test_ingreso_no_puede_ser_en_el_futuro(client):
     assert resp.status_code == 400
 
 
-def test_lectura_no_puede_ser_anterior_al_ingreso_de_aves(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, admin)
+def test_lectura_no_puede_ser_anterior_al_ingreso_de_aves(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, crear_usuario, admin)
 
     client.post(
         f"/crianzas/{crianza_id}/galpones/{cg_id}/ingresos",
@@ -170,9 +160,9 @@ def test_lectura_no_puede_ser_anterior_al_ingreso_de_aves(client):
     assert resp.status_code == 400
 
 
-def test_no_se_puede_cargar_datos_en_crianza_cerrada(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, admin)
+def test_no_se_puede_cargar_datos_en_crianza_cerrada(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, crear_usuario, admin)
 
     client.post(
         f"/crianzas/{crianza_id}/galpones/{cg_id}/ingresos",
@@ -211,9 +201,9 @@ def test_no_se_puede_cargar_datos_en_crianza_cerrada(client):
     assert resp.status_code == 400
 
 
-def test_retiro_no_puede_superar_aves_vivas_disponibles(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, admin)
+def test_retiro_no_puede_superar_aves_vivas_disponibles(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, crear_usuario, admin)
 
     client.post(
         f"/crianzas/{crianza_id}/galpones/{cg_id}/ingresos",
@@ -229,9 +219,9 @@ def test_retiro_no_puede_superar_aves_vivas_disponibles(client):
     assert "aves vivas disponibles" in resp.text
 
 
-def test_insumos_requiere_admin(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    granjero = _registrar_y_loguear(client, "granjero4@granjaelmoro.com.ar", "granjero")
+def test_insumos_requiere_admin(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    granjero = crear_usuario("granjero4@granjaelmoro.com.ar", "granjero")
     crianza_id = client.post(
         "/crianzas", json={"numero": 1, "fecha_inicio": "2024-01-01"}, headers=admin
     ).json()["id"]
@@ -255,10 +245,10 @@ def test_insumos_requiere_admin(client):
     assert len(resp.json()) == 1
 
 
-def test_retiros_requiere_admin(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    granjero = _registrar_y_loguear(client, "granjero5@granjaelmoro.com.ar", "granjero")
-    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, admin)
+def test_retiros_requiere_admin(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    granjero = crear_usuario("granjero5@granjaelmoro.com.ar", "granjero")
+    crianza_id, _, cg_id = _armar_crianza_con_galpon(client, crear_usuario, admin)
     client.post(
         f"/crianzas/{crianza_id}/galpones/{cg_id}/ingresos",
         json={"fecha": "2024-01-01", "origen": "Test", "cantidad": 1000, "muertos_transporte": 0},
@@ -284,9 +274,9 @@ def test_retiros_requiere_admin(client):
     assert len(resp.json()) == 1
 
 
-def test_get_cierre_antes_de_cerrar_da_404(client):
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    crianza_id, _, _ = _armar_crianza_con_galpon(client, admin)
+def test_get_cierre_antes_de_cerrar_da_404(client, crear_usuario):
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    crianza_id, _, _ = _armar_crianza_con_galpon(client, crear_usuario, admin)
 
     resp = client.get(f"/crianzas/{crianza_id}/cierre", headers=admin)
     assert resp.status_code == 404

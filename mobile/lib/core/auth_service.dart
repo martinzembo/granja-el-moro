@@ -56,6 +56,19 @@ class AuthService extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Registro público: siempre crea un granjero (el backend ni siquiera
+  /// acepta elegir otro rol acá, ver docs/modelo-datos.md). Una vez creada
+  /// la cuenta, inicia sesión directo — no hace falta un paso de
+  /// aprobación ni volver a tipear las credenciales en la pantalla de login.
+  Future<void> registrarGranjero(String nombre, String email, String password) async {
+    await ApiClient().post(
+      '/auth/register',
+      {'nombre': nombre, 'email': email, 'password': password},
+      auth: false,
+    );
+    await login(email, password);
+  }
+
   Future<void> logout() async {
     await _storage.delete(key: _claveToken);
     _token = null;

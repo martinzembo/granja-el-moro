@@ -37,6 +37,14 @@ sección "Alertas"):
 python -m app.db.seed_estandares
 ```
 
+Crear el usuario admin (el registro público — `POST /auth/register`, o
+"Crear cuenta" en la app — solo puede crear granjeros; no hay forma de dar
+de alta un admin por HTTP a propósito):
+
+```bash
+python -m app.db.crear_admin --nombre "Tu Nombre" --email admin@granjaelmoro.com.ar --password "una-contraseña-de-verdad"
+```
+
 ## Correr el servidor
 
 ```bash

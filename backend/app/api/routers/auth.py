@@ -4,14 +4,17 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
 from app.db.session import get_db
-from app.models.usuario import Usuario
-from app.schemas.usuario import LoginRequest, Token, UsuarioCreate, UsuarioOut
+from app.models.usuario import RolUsuario, Usuario
+from app.schemas.usuario import LoginRequest, RegistroCreate, Token, UsuarioOut
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 @router.post("/register", response_model=UsuarioOut, status_code=status.HTTP_201_CREATED)
-def register(payload: UsuarioCreate, db: Session = Depends(get_db)):
+def register(payload: RegistroCreate, db: Session = Depends(get_db)):
+    """Registro público, sin login — siempre crea un granjero, activo de
+    inmediato. No hay forma de autoregistrarse como admin (ver
+    app/schemas/usuario.py, RegistroCreate, y app/db/crear_admin.py)."""
     if db.query(Usuario).filter(Usuario.email == payload.email).first():
         raise HTTPException(status_code=400, detail="El email ya está registrado")
 
@@ -19,7 +22,7 @@ def register(payload: UsuarioCreate, db: Session = Depends(get_db)):
         nombre=payload.nombre,
         email=payload.email,
         password_hash=hash_password(payload.password),
-        rol=payload.rol,
+        rol=RolUsuario.granjero,
     )
     db.add(usuario)
     db.commit()

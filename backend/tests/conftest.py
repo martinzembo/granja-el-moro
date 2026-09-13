@@ -46,3 +46,30 @@ def db_session():
     finally:
         db.close()
         Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture()
+def crear_usuario(client, db_session):
+    """Da de alta un usuario y devuelve el header de Authorization ya
+    logueado. Los granjeros se dan de alta por el registro público
+    (`POST /auth/register`, ya no acepta `rol`: siempre crea granjero); los
+    admin se crean directo en la base con app/db/crear_admin.py, igual que
+    en producción — no existe ningún endpoint que cree un admin.
+    """
+
+    def _crear(email: str, rol: str, password: str = "clave1234", nombre: str | None = None):
+        nombre = nombre or email
+        if rol == "admin":
+            from app.db.crear_admin import crear_admin
+
+            crear_admin(db_session, nombre, email, password)
+        else:
+            client.post(
+                "/auth/register",
+                json={"nombre": nombre, "email": email, "password": password},
+            )
+        login = client.post("/auth/login", json={"email": email, "password": password})
+        token = login.json()["access_token"]
+        return {"Authorization": f"Bearer {token}"}
+
+    return _crear

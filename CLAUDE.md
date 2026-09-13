@@ -98,6 +98,19 @@ logueado usa `Depends(get_current_user)`; uno restringido a un rol usa
 en `app/api/routers/galpones.py` (CRUD completo con lectura abierta a
 cualquier usuario autenticado y escritura restringida a admin).
 
+**El rol admin no se autoregistra.** `POST /auth/register` es público (la
+app lo usa para "Crear cuenta") y usa `RegistroCreate`
+(`app/schemas/usuario.py`), que a propósito no tiene campo `rol` —
+`model_config = ConfigDict(extra="forbid")` hace que colar un `rol` en el
+body devuelva 422 en vez de ignorarlo en silencio. El registro público
+siempre crea un granjero, activo de inmediato. La única forma de dar de alta
+un admin es `python -m app.db.crear_admin --nombre "..." --email ... --password ...`
+(corre directo contra la base, sin pasar por HTTP — ver ese archivo). Otras
+reglas de `RegistroCreate`/`UsuarioCreate`/`LoginRequest`: contraseña mínimo
+8 caracteres, email normalizado a minúsculas antes de guardar/comparar (así
+"Juan@Gmail.com" y "juan@gmail.com" son el mismo usuario tanto al
+registrarse como al loguearse).
+
 ### Testing
 
 `tests/conftest.py` levanta una base SQLite en memoria y sobreescribe la

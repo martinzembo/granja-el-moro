@@ -4,23 +4,13 @@ la API.
 """
 
 
-def _registrar_y_loguear(client, email, rol, password="clave1234"):
-    client.post(
-        "/auth/register",
-        json={"nombre": email, "email": email, "password": password, "rol": rol},
-    )
-    login = client.post("/auth/login", json={"email": email, "password": password})
-    token = login.json()["access_token"]
-    return {"Authorization": f"Bearer {token}"}
-
-
-def _armar_dos_crianzas_con_mortandad_critica(client):
+def _armar_dos_crianzas_con_mortandad_critica(client, crear_usuario):
     """Dos crianzas con un galpón cada una; a la crianza 1 le carga una
     mortandad muy por encima del estándar (dispara alerta), a la crianza 2
     no le carga nada — sirve para probar que el scope por crianza funciona.
     """
-    admin = _registrar_y_loguear(client, "admin@granjaelmoro.com.ar", "admin")
-    granjero = _registrar_y_loguear(client, "granjero@granjaelmoro.com.ar", "granjero")
+    admin = crear_usuario("admin@granjaelmoro.com.ar", "admin")
+    granjero = crear_usuario("granjero@granjaelmoro.com.ar", "granjero")
     granjero_id = client.get("/auth/me", headers=granjero).json()["id"]
 
     ids = {}
@@ -48,14 +38,14 @@ def _armar_dos_crianzas_con_mortandad_critica(client):
     return admin, granjero, ids
 
 
-def test_listar_alertas_scope_por_crianza(client, db_session):
+def test_listar_alertas_scope_por_crianza(client, db_session, crear_usuario):
 
     from app.models.estandar import Estandar
 
     db_session.add(Estandar(dia_vida=0, mortandad_acumulada_esperada=0.001, agua_litros_pollo_esperado=0.01))
     db_session.commit()
 
-    admin, granjero, ids = _armar_dos_crianzas_con_mortandad_critica(client)
+    admin, granjero, ids = _armar_dos_crianzas_con_mortandad_critica(client, crear_usuario)
 
     # Mortandad muy alta en crianza 1, día 0 (misma fecha del ingreso).
     resp = client.post(
@@ -74,7 +64,7 @@ def test_listar_alertas_scope_por_crianza(client, db_session):
     assert alertas_crianza_2 == []
 
 
-def test_resolver_alerta_de_otra_crianza_da_404(client, db_session):
+def test_resolver_alerta_de_otra_crianza_da_404(client, db_session, crear_usuario):
     """Regresión del bug: resolver_alerta no chequeaba que la alerta
     perteneciera a la crianza del path — antes esto devolvía 200."""
 
@@ -83,7 +73,7 @@ def test_resolver_alerta_de_otra_crianza_da_404(client, db_session):
     db_session.add(Estandar(dia_vida=0, mortandad_acumulada_esperada=0.001, agua_litros_pollo_esperado=0.01))
     db_session.commit()
 
-    admin, granjero, ids = _armar_dos_crianzas_con_mortandad_critica(client)
+    admin, granjero, ids = _armar_dos_crianzas_con_mortandad_critica(client, crear_usuario)
 
     client.post(
         f"/crianzas/{ids[1]['crianza_id']}/galpones/{ids[1]['cg_id']}/lecturas",
@@ -102,13 +92,13 @@ def test_resolver_alerta_de_otra_crianza_da_404(client, db_session):
     assert resp.json()["resuelta"] is True
 
 
-def test_resolver_alerta_requiere_admin(client, db_session):
+def test_resolver_alerta_requiere_admin(client, db_session, crear_usuario):
     from app.models.estandar import Estandar
 
     db_session.add(Estandar(dia_vida=0, mortandad_acumulada_esperada=0.001, agua_litros_pollo_esperado=0.01))
     db_session.commit()
 
-    admin, granjero, ids = _armar_dos_crianzas_con_mortandad_critica(client)
+    admin, granjero, ids = _armar_dos_crianzas_con_mortandad_critica(client, crear_usuario)
     client.post(
         f"/crianzas/{ids[1]['crianza_id']}/galpones/{ids[1]['cg_id']}/lecturas",
         json={"fecha": "2024-01-01", "mortandad": 500, "lectura_agua": 100.0},
@@ -120,13 +110,13 @@ def test_resolver_alerta_requiere_admin(client, db_session):
     assert resp.status_code == 403
 
 
-def test_filtro_resuelta(client, db_session):
+def test_filtro_resuelta(client, db_session, crear_usuario):
     from app.models.estandar import Estandar
 
     db_session.add(Estandar(dia_vida=0, mortandad_acumulada_esperada=0.001, agua_litros_pollo_esperado=0.01))
     db_session.commit()
 
-    admin, granjero, ids = _armar_dos_crianzas_con_mortandad_critica(client)
+    admin, granjero, ids = _armar_dos_crianzas_con_mortandad_critica(client, crear_usuario)
     client.post(
         f"/crianzas/{ids[1]['crianza_id']}/galpones/{ids[1]['cg_id']}/lecturas",
         json={"fecha": "2024-01-01", "mortandad": 500, "lectura_agua": 100.0},

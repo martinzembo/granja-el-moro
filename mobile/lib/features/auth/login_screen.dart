@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/api_client.dart';
 import '../../core/auth_service.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,6 +16,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
+  bool _passwordVisible = false;
   bool _cargando = false;
 
   @override
@@ -71,8 +73,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: _passwordCtrl,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Contraseña', border: OutlineInputBorder()),
+                    obscureText: !_passwordVisible,
+                    decoration: InputDecoration(
+                      labelText: 'Contraseña',
+                      border: const OutlineInputBorder(),
+                      suffixIcon: IconButton(
+                        icon: Icon(_passwordVisible ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () => setState(() => _passwordVisible = !_passwordVisible),
+                      ),
+                    ),
                     validator: (v) => (v == null || v.isEmpty) ? 'Ingresá tu contraseña' : null,
                     onFieldSubmitted: (_) => _iniciarSesion(),
                   ),
@@ -86,6 +95,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Text('Ingresar'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: _cargando
+                        ? null
+                        : () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                            ),
+                    child: const Text('¿No tenés cuenta? Creá una'),
                   ),
                 ],
               ),

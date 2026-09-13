@@ -6,15 +6,16 @@ def test_health(client):
 
 def test_register_and_login(client):
     register_payload = {
-        "nombre": "Admin Test",
-        "email": "admin@granjaelmoro.com.ar",
+        "nombre": "Granjero Test",
+        "email": "granjero@granjaelmoro.com.ar",
         "password": "supersegura123",
-        "rol": "admin",
     }
     resp = client.post("/auth/register", json=register_payload)
     assert resp.status_code == 201, resp.text
     body = resp.json()
     assert body["email"] == register_payload["email"]
+    assert body["rol"] == "granjero"
+    assert body["activo"] is True
     assert "password" not in body
     assert "password_hash" not in body
 
@@ -30,6 +31,53 @@ def test_register_and_login(client):
     assert resp.json()["email"] == register_payload["email"]
 
 
+def test_registro_publico_no_puede_elegir_rol(client):
+    """RegistroCreate usa extra="forbid" — un `rol` colado en el body
+    devuelve 422, no se ignora en silencio ni crea un admin."""
+    resp = client.post(
+        "/auth/register",
+        json={
+            "nombre": "Intento Admin",
+            "email": "intento@granjaelmoro.com.ar",
+            "password": "clave12345",
+            "rol": "admin",
+        },
+    )
+    assert resp.status_code == 422
+
+
+def test_registro_publico_rechaza_password_corta(client):
+    resp = client.post(
+        "/auth/register",
+        json={"nombre": "Corto", "email": "corto@granjaelmoro.com.ar", "password": "1234567"},
+    )
+    assert resp.status_code == 422
+
+
+def test_registro_rechaza_email_duplicado_sin_importar_mayusculas(client):
+    client.post(
+        "/auth/register",
+        json={"nombre": "Uno", "email": "duplicado@granjaelmoro.com.ar", "password": "clave12345"},
+    )
+    resp = client.post(
+        "/auth/register",
+        json={"nombre": "Dos", "email": "DUPLICADO@GranjaElMoro.com.ar", "password": "otraclave123"},
+    )
+    assert resp.status_code == 400
+    assert "ya está registrado" in resp.text
+
+
+def test_login_normaliza_mayusculas_del_email(client):
+    client.post(
+        "/auth/register",
+        json={"nombre": "Casing", "email": "casing@granjaelmoro.com.ar", "password": "clave12345"},
+    )
+    resp = client.post(
+        "/auth/login", json={"email": "Casing@GranjaElMoro.com.ar", "password": "clave12345"}
+    )
+    assert resp.status_code == 200, resp.text
+
+
 def test_login_wrong_password(client):
     client.post(
         "/auth/register",
@@ -37,7 +85,6 @@ def test_login_wrong_password(client):
             "nombre": "Otro",
             "email": "otro@granjaelmoro.com.ar",
             "password": "correcta123",
-            "rol": "granjero",
         },
     )
     resp = client.post(
@@ -46,25 +93,24 @@ def test_login_wrong_password(client):
     assert resp.status_code == 401
 
 
-def test_galpones_requiere_admin_para_crear(client):
-    # granjero se registra y loguea
-    client.post(
-        "/auth/register",
-        json={
-            "nombre": "Granjero",
-            "email": "granjero@granjaelmoro.com.ar",
-            "password": "clave1234",
-            "rol": "granjero",
-        },
-    )
-    login = client.post(
-        "/auth/login", json={"email": "granjero@granjaelmoro.com.ar", "password": "clave1234"}
-    )
-    token = login.json()["access_token"]
+def test_galpones_requiere_admin_para_crear(client, crear_usuario):
+    granjero = crear_usuario("granjero@granjaelmoro.com.ar", "granjero")
 
     resp = client.post(
         "/galpones",
         json={"nombre": "Galpón 1", "capacidad_maxima": 24000},
-        headers={"Authorization": f"Bearer {token}"},
+        headers=granjero,
     )
     assert resp.status_code == 403
+
+
+def test_admin_no_se_crea_por_http_pero_si_por_el_script(client, db_session):
+    from app.db.crear_admin import crear_admin
+
+    admin = crear_admin(db_session, "Admin Real", "admin@granjaelmoro.com.ar", "clave12345")
+    assert admin.rol.value == "admin"
+
+    resp = client.post(
+        "/auth/login", json={"email": "admin@granjaelmoro.com.ar", "password": "clave12345"}
+    )
+    assert resp.status_code == 200, resp.text
