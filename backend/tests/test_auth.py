@@ -54,26 +54,44 @@ def test_registro_publico_rechaza_password_corta(client):
     assert resp.status_code == 422
 
 
-def test_registro_rechaza_email_duplicado_sin_importar_mayusculas(client):
+def test_registro_rechaza_email_duplicado_exacto(client):
     client.post(
         "/auth/register",
         json={"nombre": "Uno", "email": "duplicado@granjaelmoro.com.ar", "password": "clave12345"},
     )
     resp = client.post(
         "/auth/register",
-        json={"nombre": "Dos", "email": "DUPLICADO@GranjaElMoro.com.ar", "password": "otraclave123"},
+        json={"nombre": "Dos", "email": "duplicado@granjaelmoro.com.ar", "password": "otraclave123"},
     )
     assert resp.status_code == 400
     assert "ya está registrado" in resp.text
 
 
-def test_login_normaliza_mayusculas_del_email(client):
+def test_email_es_case_sensitive(client):
+    """Decisión explícita del cliente: "Casing@x.com" y "casing@x.com" son
+    cuentas distintas — no se normaliza a minúsculas ni al registrarse ni al
+    loguearse (ver app/schemas/usuario.py, _normalizar_email)."""
     client.post(
         "/auth/register",
-        json={"nombre": "Casing", "email": "casing@granjaelmoro.com.ar", "password": "clave12345"},
+        json={"nombre": "Casing", "email": "Casing@granjaelmoro.com.ar", "password": "clave12345"},
     )
+    # Mismo email pero en minúsculas -> no es la misma cuenta, se puede
+    # registrar de nuevo sin chocar con "ya está registrado".
     resp = client.post(
-        "/auth/login", json={"email": "Casing@GranjaElMoro.com.ar", "password": "clave12345"}
+        "/auth/register",
+        json={"nombre": "Otro Casing", "email": "casing@granjaelmoro.com.ar", "password": "clave12345"},
+    )
+    assert resp.status_code == 201, resp.text
+
+    # Loguearse con una capitalización distinta a la registrada falla.
+    resp = client.post(
+        "/auth/login", json={"email": "CASING@granjaelmoro.com.ar", "password": "clave12345"}
+    )
+    assert resp.status_code == 401
+
+    # Con la capitalización exacta funciona.
+    resp = client.post(
+        "/auth/login", json={"email": "Casing@granjaelmoro.com.ar", "password": "clave12345"}
     )
     assert resp.status_code == 200, resp.text
 

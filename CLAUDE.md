@@ -107,9 +107,11 @@ siempre crea un granjero, activo de inmediato. La única forma de dar de alta
 un admin es `python -m app.db.crear_admin --nombre "..." --email ... --password ...`
 (corre directo contra la base, sin pasar por HTTP — ver ese archivo). Otras
 reglas de `RegistroCreate`/`UsuarioCreate`/`LoginRequest`: contraseña mínimo
-8 caracteres, email normalizado a minúsculas antes de guardar/comparar (así
-"Juan@Gmail.com" y "juan@gmail.com" son el mismo usuario tanto al
-registrarse como al loguearse).
+8 caracteres, email **case-sensitive** a propósito (decisión explícita del
+cliente pese a la recomendación en contra — "Juan@x.com" y "juan@x.com" son
+cuentas distintas, tanto al registrarse como al loguearse; solo se recorta
+espacios). La app fuerza `textCapitalization: TextCapitalization.none` en el
+campo de email para mitigar que el teclado le meta una mayúscula sola.
 
 ### Testing
 

@@ -14,7 +14,10 @@ from app.models.usuario import RolUsuario, Usuario
 
 
 def crear_admin(db, nombre: str, email: str, password: str) -> Usuario:
-    email = email.strip().lower()
+    # El email es case-sensitive en todo el sistema (decisión del cliente,
+    # ver app/schemas/usuario.py) — acá solo se recortan espacios, igual
+    # que en el registro público.
+    email = email.strip()
     if len(password) < 8:
         raise ValueError("La contraseña tiene que tener al menos 8 caracteres")
     if db.query(Usuario).filter(Usuario.email == email).first():

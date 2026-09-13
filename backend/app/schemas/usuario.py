@@ -4,9 +4,12 @@ from app.models.usuario import RolUsuario
 
 
 def _normalizar_email(v: str) -> str:
-    """minúsculas + sin espacios — así "Juan@Gmail.com" y "juan@gmail.com"
-    son el mismo usuario, tanto al registrarse como al loguearse."""
-    return v.strip().lower()
+    """Solo recorta espacios — el email es case-sensitive a propósito
+    (decisión explícita del cliente, ver historial de commits): "Juan@x.com"
+    y "juan@x.com" son cuentas distintas, tanto al registrarse como al
+    loguearse. El campo de email en la app fuerza que el teclado no
+    autocapitalice, para no generar un mail con mayúsculas por accidente."""
+    return v.strip()
 
 
 class RegistroCreate(BaseModel):

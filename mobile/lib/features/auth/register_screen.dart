@@ -95,6 +95,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     controller: _emailCtrl,
                     keyboardType: TextInputType.emailAddress,
                     autocorrect: false,
+                    // El email es case-sensitive (decisión del cliente) — se
+                    // evita que el teclado le meta una mayúscula sola.
+                    textCapitalization: TextCapitalization.none,
                     decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
                     validator: validarEmail,
                   ),
