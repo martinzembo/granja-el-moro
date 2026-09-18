@@ -2,6 +2,14 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Convenciones de git
+
+**No agregar líneas de atribución a Claude en los commits** (nada de
+`Co-Authored-By: Claude...` ni menciones similares) — pedido explícito del
+cliente, que además hizo reescribir el historial existente para sacar las
+que ya estaban. Esto vale para todo commit hecho en este repo, sin
+excepción.
+
 ## Project
 
 Sistema de gestión de crianzas avícolas para Granja "El Moro" (Lobos, Buenos
