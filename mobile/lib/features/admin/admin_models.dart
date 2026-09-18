@@ -209,6 +209,109 @@ class CierreCrianza {
   }
 }
 
+/// Espejo de `ResumenGalponOut` — los números "en vivo" de un galpón (ver
+/// app/services/resumen.py). A propósito no trae índice de crecimiento ni
+/// conversión: eso necesita peso, que no se conoce hasta el retiro a faena.
+class ResumenGalpon {
+  ResumenGalpon({
+    required this.galponNombre,
+    required this.granjeroNombre,
+    required this.edadDias,
+    required this.avesNetas,
+    required this.avesVivas,
+    required this.mortandadAcumulada,
+    required this.mortandadPct,
+    required this.mortandadEsperadaPct,
+    required this.aguaAcumuladaLitros,
+    required this.aguaLitrosPolloHoy,
+    required this.aguaEsperadaLitrosPolloHoy,
+  });
+
+  final String galponNombre;
+  final String granjeroNombre;
+  final int? edadDias;
+  final int avesNetas;
+  final int avesVivas;
+  final int mortandadAcumulada;
+  final double mortandadPct;
+  final double? mortandadEsperadaPct;
+  final double aguaAcumuladaLitros;
+  final double? aguaLitrosPolloHoy;
+  final double? aguaEsperadaLitrosPolloHoy;
+
+  factory ResumenGalpon.fromJson(Map<String, dynamic> json) {
+    double? asDouble(dynamic v) => v == null ? null : (v as num).toDouble();
+    return ResumenGalpon(
+      galponNombre: json['galpon_nombre'] as String,
+      granjeroNombre: json['granjero_nombre'] as String,
+      edadDias: json['edad_dias'] as int?,
+      avesNetas: json['aves_netas'] as int,
+      avesVivas: json['aves_vivas'] as int,
+      mortandadAcumulada: json['mortandad_acumulada'] as int,
+      mortandadPct: (json['mortandad_pct'] as num).toDouble(),
+      mortandadEsperadaPct: asDouble(json['mortandad_esperada_pct']),
+      aguaAcumuladaLitros: (json['agua_acumulada_litros'] as num).toDouble(),
+      aguaLitrosPolloHoy: asDouble(json['agua_litros_pollo_hoy']),
+      aguaEsperadaLitrosPolloHoy: asDouble(json['agua_esperada_litros_pollo_hoy']),
+    );
+  }
+}
+
+/// Espejo de `ResumenGranjaOut` — gas/electricidad de toda la granja, mismo
+/// criterio de comparación (promedio móvil de 3 días) que las alertas.
+class ResumenGranja {
+  ResumenGranja({
+    required this.fecha,
+    required this.consumoGasHoy,
+    required this.promedioGas3Dias,
+    required this.consumoElectricidadActivaHoy,
+    required this.promedioElectricidadActiva3Dias,
+    required this.consumoElectricidadReactivaHoy,
+    required this.promedioElectricidadReactiva3Dias,
+  });
+
+  final DateTime? fecha;
+  final double? consumoGasHoy;
+  final double? promedioGas3Dias;
+  final double? consumoElectricidadActivaHoy;
+  final double? promedioElectricidadActiva3Dias;
+  final double? consumoElectricidadReactivaHoy;
+  final double? promedioElectricidadReactiva3Dias;
+
+  factory ResumenGranja.fromJson(Map<String, dynamic> json) {
+    double? asDouble(dynamic v) => v == null ? null : (v as num).toDouble();
+    return ResumenGranja(
+      fecha: json['fecha'] == null ? null : DateTime.parse(json['fecha'] as String),
+      consumoGasHoy: asDouble(json['consumo_gas_hoy']),
+      promedioGas3Dias: asDouble(json['promedio_gas_3_dias']),
+      consumoElectricidadActivaHoy: asDouble(json['consumo_electricidad_activa_hoy']),
+      promedioElectricidadActiva3Dias: asDouble(json['promedio_electricidad_activa_3_dias']),
+      consumoElectricidadReactivaHoy: asDouble(json['consumo_electricidad_reactiva_hoy']),
+      promedioElectricidadReactiva3Dias: asDouble(json['promedio_electricidad_reactiva_3_dias']),
+    );
+  }
+}
+
+/// Espejo de `ResumenCrianzaOut` — el "dashboard" que pidió el
+/// administrador: los mismos números que hoy arma a mano mirando el Excel.
+class ResumenCrianza {
+  ResumenCrianza({required this.alimentoEntregadoKg, required this.granja, required this.galpones});
+
+  final double alimentoEntregadoKg;
+  final ResumenGranja granja;
+  final List<ResumenGalpon> galpones;
+
+  factory ResumenCrianza.fromJson(Map<String, dynamic> json) {
+    return ResumenCrianza(
+      alimentoEntregadoKg: (json['alimento_entregado_kg'] as num).toDouble(),
+      granja: ResumenGranja.fromJson(json['granja'] as Map<String, dynamic>),
+      galpones: (json['galpones'] as List)
+          .map((e) => ResumenGalpon.fromJson(e as Map<String, dynamic>))
+          .toList(),
+    );
+  }
+}
+
 /// Reexporta Usuario/RolUsuario para no repetir el import en cada pantalla
 /// de admin que necesita elegir un granjero.
 typedef Granjero = Usuario;

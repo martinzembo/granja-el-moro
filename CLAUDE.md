@@ -172,6 +172,23 @@ el promedio móvil de los últimos 3 días de la misma crianza (±40%). Los
 umbrales son constantes al principio del archivo, pensados para ajustarse
 con la experiencia de más crianzas reales, no para quedar fijos.
 
+### Resumen (dashboard)
+
+El administrador pidió ver los números reales de una crianza en curso, no
+solo enterarse cuando algo se desvía — `GET /crianzas/{id}/resumen`
+(`app/services/resumen.py`) da edad, mortandad, agua acumulada y
+alimento/gas/electricidad, reusando los mismos cálculos y umbrales de
+comparación que `app/services/alertas.py` (mismo `Estandar` por edad para
+mortandad/agua, mismo promedio móvil de 3 días para gas/electricidad) — a
+propósito no hay un segundo criterio de "cuánto se esperaba" en el sistema.
+No incluye índice de crecimiento/conversión/IE: esos necesitan peso, y acá
+no se pesa a las aves hasta que salen a faena (`RetiroCamion`) — eso se
+calcula recién al cierre, ver `app/services/calculos.py`. La edad para
+comparar contra `Estandar` usa la fecha real de hoy (un hecho de calendario,
+no depende de si ya se cargó el dato del día) — `resumen_crianza` acepta un
+`hoy` opcional solo para poder testear eso de forma determinística.
+Pantalla mobile: `ResumenScreen`, entrada desde `CrianzaDetailScreen`.
+
 ### Validaciones
 
 `app/api/validaciones.py` tiene las guardas de integridad que se repiten

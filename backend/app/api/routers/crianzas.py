@@ -21,7 +21,9 @@ from app.schemas.crianza import (
     IngresoAvesCreate,
     IngresoAvesOut,
 )
+from app.schemas.resumen import ResumenCrianzaOut
 from app.services.aves import aves_netas_totales
+from app.services.resumen import resumen_crianza
 
 router = APIRouter(prefix="/crianzas", tags=["crianzas"])
 
@@ -67,6 +69,18 @@ def obtener(crianza_id: int, db: Session = Depends(get_db), _=Depends(get_curren
     if not crianza:
         raise HTTPException(status_code=404, detail="Crianza no encontrada")
     return crianza
+
+
+@router.get("/{crianza_id}/resumen", response_model=ResumenCrianzaOut)
+def obtener_resumen(crianza_id: int, db: Session = Depends(get_db), _=Depends(get_current_user)):
+    """Números reales "en vivo" de la crianza (edad, mortandad, agua,
+    alimento, gas/electricidad) — ver app/services/resumen.py. Lectura
+    abierta a cualquier usuario autenticado, igual que el resto de los
+    endpoints de consulta de este router."""
+    crianza = db.get(Crianza, crianza_id)
+    if not crianza:
+        raise HTTPException(status_code=404, detail="Crianza no encontrada")
+    return resumen_crianza(db, crianza)
 
 
 @router.post(
