@@ -141,6 +141,11 @@ class AdminApi {
     return CierreCrianza.fromJson(data as Map<String, dynamic>);
   }
 
+  Future<ResumenCrianza> resumen(int crianzaId) async {
+    final data = await _client.get('/crianzas/$crianzaId/resumen');
+    return ResumenCrianza.fromJson(data as Map<String, dynamic>);
+  }
+
   Future<List<Alerta>> alertas(int crianzaId, {bool? resuelta}) async {
     final query = resuelta == null ? '' : '?resuelta=$resuelta';
     final data = await _client.get('/crianzas/$crianzaId/alertas$query') as List;

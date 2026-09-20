@@ -9,6 +9,7 @@ import 'asignar_galpon_form_screen.dart';
 import 'cierre_form_screen.dart';
 import 'galpon_detail_screen.dart';
 import 'registrar_entrega_form_screen.dart';
+import 'resumen_screen.dart';
 
 class CrianzaDetailScreen extends StatefulWidget {
   const CrianzaDetailScreen({super.key, required this.crianza});
@@ -108,6 +109,18 @@ class _CrianzaDetailScreenState extends State<CrianzaDetailScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 if (!_crianza.enCurso) _tarjetaLiquidacion(),
+                Card(
+                  child: ListTile(
+                    leading: const Icon(Icons.query_stats),
+                    title: const Text('Resumen'),
+                    subtitle: const Text('Edad, mortandad, agua, alimento y gas/electricidad al día'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(builder: (_) => ResumenScreen(crianza: _crianza)),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 FutureBuilder<List<Alerta>>(
                   future: _alertas,
                   builder: (context, snapshotAlertas) {
