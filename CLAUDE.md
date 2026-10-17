@@ -13,12 +13,16 @@ excepción.
 ## Project
 
 Sistema de gestión de crianzas avícolas para Granja "El Moro" (Lobos, Buenos
-Aires). Reemplaza un flujo manual de WhatsApp + planillas por una app
-Android única (carga diaria de granjeros + monitoreo del administrador)
-sobre una API común. Contexto completo del negocio, objetivos y alcance
-original en [docs/propuesta.md](docs/propuesta.md) — la propuesta describe
-un panel web aparte para el administrador; eso se ajustó después, ver
-[docs/plan.md](docs/plan.md) sección "Ajuste de alcance".
+Aires). Reemplaza un flujo manual de WhatsApp + planillas: carga diaria del
+granjero desde una app Android y administración desde un panel web, sobre
+una API común. Contexto completo del negocio, objetivos y alcance original
+en [docs/propuesta.md](docs/propuesta.md). El alcance se ajustó dos veces
+sobre esa propuesta original — primero a una sola app Android para los dos
+roles, después (corrección del docente de la cátedra que evalúa el
+proyecto, viendo capturas de la app) de vuelta a panel web para el admin +
+app Android solo para el granjero, que es como quedó. Ver
+[docs/plan.md](docs/plan.md) sección "Ajuste de alcance" para el detalle de
+ambos cambios.
 
 Plan de desarrollo (orden de construcción por etapas, no un cronograma
 estricto) en [docs/plan.md](docs/plan.md). Modelo de datos en
@@ -31,12 +35,14 @@ están verificadas exactas contra esos números reales.
 ## Repo layout (monorepo)
 
 - `backend/` — API REST (FastAPI + PostgreSQL + Alembic). En desarrollo activo.
-- `mobile/` — **una sola** app Flutter/Android para los dos roles (granjero
-  y administrador) — no dos apps, no panel web. Aún no iniciada (Semana 4-7
-  del plan). Ver [docs/plan.md](docs/plan.md), sección "Ajuste de alcance".
-- `web/` — panel React para el administrador. **Pospuesto**, no es alcance
-  actual — la propuesta original lo incluía, pero el cliente prefiere todo
-  dentro de la app Android. Carpeta vacía a propósito.
+- `mobile/` — app Flutter/Android, **solo para el rol granjero** (carga
+  diaria: mortandad, agua, gas/electricidad, entregas de alimento). El
+  flujo de admin que tenía antes (`features/admin/`) sigue en el repo pero
+  ya no está enganchado desde `app.dart` — ver sección Mobile más abajo.
+- `web/` — panel React para el administrador (crianzas, galpones, alertas,
+  resumen, cierre, cuentas pendientes de activar). Reemplaza al admin
+  móvil — ver sección Web más abajo y [docs/plan.md](docs/plan.md), sección
+  "Ajuste de alcance".
 - `docs/` — propuesta de proyecto original, plan (con los ajustes de alcance
   reales) y modelo de datos.
 
@@ -230,14 +236,14 @@ acumule historial de más crianzas.
 
 ## Mobile
 
-Un solo proyecto Flutter, un solo APK, para granjeros y administradores
-(Semana 4-7 del plan — ver [docs/plan.md](docs/plan.md)). Los dos roles
-**no comparten pantallas**: después del login, cada uno entra a una
-navegación completamente separada armada para su tarea (el granjero nunca ve
-pantallas de admin, ni viceversa) — no es una navegación única con tabs
-condicionales por rol.
-
-El panel web (`web/`) queda pospuesto — no se lo construye por ahora.
+Proyecto Flutter, un solo APK. Originalmente era para los dos roles
+(granjero y admin, Semana 4-7 del plan), pero tras la corrección del
+docente (ver sección Project) **el admin móvil quedó reemplazado por el
+panel web** — `features/admin/` sigue en el repo (código probado, por si
+hace falta retomarlo) pero ya no está enganchado desde `app.dart`: un admin
+que loguea en la app ve `AdminEnWebScreen` (`features/admin/admin_en_web_screen.dart`),
+un aviso con botón de cerrar sesión en vez del flujo completo que tenía
+antes. La app en uso real es, en la práctica, solo para el granjero.
 
 ### Entorno (esta máquina)
 
@@ -272,3 +278,47 @@ adb reverse tcp:8000 tcp:8000     # con el celular por USB, así "localhost:8000
 Cuando el proyecto tenga más estructura que el scaffold de `flutter create`
 (cliente HTTP, manejo de estado, navegación por rol), documentar acá esas
 decisiones siguiendo el mismo formato que la sección de Backend.
+
+## Web
+
+Panel del administrador — React + Vite, sin TypeScript (mismo criterio
+pragmático que el resto del proyecto: sin capas extra que este tamaño de
+proyecto no necesita). Reemplaza al admin móvil (ver sección Mobile) — es
+la única forma de administrar crianzas/galpones/alertas/cierre/cuentas
+pendientes.
+
+### Arquitectura
+
+Espejo deliberado de `mobile/lib/features/admin/`, mismo recorte de
+archivos para no tener dos formas distintas de organizar lo mismo:
+
+- `src/core/apiClient.js` — wrapper sobre `fetch`, mismo criterio que
+  `mobile/lib/core/api_client.dart` (decodifica los errores de FastAPI a
+  `ApiException`, con el mismo mensaje en español que ya manda el backend).
+- `src/core/config.js` — la URL del backend se arma a partir del host
+  desde el que se abrió el panel (`window.location.hostname`), no se
+  hardcodea `localhost` — así sirve igual si el panel se abre en la compu
+  que corre el backend o desde otro dispositivo de la red de la granja
+  apuntando a la IP de esa compu.
+- `src/core/AuthContext.jsx` — sesión del admin (token en `localStorage`),
+  espejo de `AuthService` en mobile. A propósito rechaza un login que no
+  sea de un usuario `admin` — el panel web no es para granjeros.
+- `src/features/admin/adminApi.js` — mismos endpoints que
+  `mobile/lib/features/admin/admin_api.dart`, 1:1.
+- `src/features/admin/*Screen.jsx` — una pantalla por archivo, mismo
+  recorte que las pantallas de mobile (`CrianzaDetailScreen`,
+  `GalponDetailScreen`, `ResumenScreen`, `AlertasScreen`, `CierreFormScreen`,
+  `UsuariosPendientesScreen`, formularios de ingreso/retiro/entrega/alta).
+
+### Comandos
+
+```bash
+cd web
+npm install        # primera vez
+npm run dev         # servidor de desarrollo (http://localhost:5173)
+npm run build        # build de producción a dist/
+npm run lint          # oxlint
+```
+
+Necesita el backend corriendo (`uvicorn app.main:app`, ver backend/README.md)
+en el mismo host, puerto 8000.

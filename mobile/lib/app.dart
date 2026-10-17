@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'core/auth_service.dart';
 import 'core/usuario.dart';
-import 'features/admin/admin_home_screen.dart';
+import 'features/admin/admin_en_web_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/granjero/granjero_home_screen.dart';
 
@@ -23,10 +23,11 @@ class GranjaElMoroApp extends StatelessWidget {
   }
 }
 
-/// Decide qué pantalla mostrar según el estado de sesión. Una vez logueado,
-/// el rol define un flujo de navegación completo y separado — el granjero
-/// nunca ve pantallas de administrador, ni viceversa (ver CLAUDE.md, sección
-/// Mobile).
+/// Decide qué pantalla mostrar según el estado de sesión. El granjero tiene
+/// su flujo completo acá; el admin ya no — el panel de administrador pasó a
+/// ser la versión web (pedido del docente de la cátedra, ver CLAUDE.md
+/// sección Web), así que un admin que entra por la app solo ve un aviso
+/// (AdminEnWebScreen) en vez del flujo completo que tenía antes.
 class _Portal extends StatelessWidget {
   const _Portal();
 
@@ -40,7 +41,7 @@ class _Portal extends StatelessWidget {
         return const LoginScreen();
       case EstadoAuth.autenticado:
         return auth.usuario!.rol == RolUsuario.admin
-            ? const AdminHomeScreen()
+            ? const AdminEnWebScreen()
             : const GranjeroHomeScreen();
     }
   }

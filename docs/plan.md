@@ -9,14 +9,21 @@ Referencia: [propuesta.md](propuesta.md) — fundamentación, objetivos y alcanc
 del proyecto. Etapas 4.3 de la propuesta se corresponden con las semanas de
 este plan.
 
-**Ajuste de alcance (post-Semana 3):** la propuesta original describía dos
-clientes separados — app móvil para granjeros y panel web (React) para el
-administrador. En la práctica, lo que el cliente quiere es **una sola app
-Android** para los dos roles (granjeros y administradores), no un panel web
-aparte. El panel web queda pospuesto — se evalúa más adelante si hace falta
-(ej. para ver reportes en una pantalla más grande), pero no es el alcance
-actual. Las Semanas 4-7 de abajo reflejan este ajuste, no el documento
-original.
+**Ajuste de alcance — primera vuelta (post-Semana 3):** la propuesta
+original describía dos clientes separados — app móvil para granjeros y
+panel web (React) para el administrador. En la práctica, lo que el cliente
+quería en ese momento era **una sola app Android** para los dos roles, no
+un panel web aparte. El panel web quedó pospuesto. Las Semanas 4-7 de abajo
+documentan ese ajuste, no el documento original.
+
+**Ajuste de alcance — segunda vuelta:** una vez construido el admin móvil y
+mostradas capturas de la app, el docente de la cátedra que evalúa el
+proyecto corrigió ese criterio: pidió volver a separar los clientes como en
+la propuesta original, panel web para el administrador. El admin móvil
+descrito en la Semana 6-7 de abajo se construyó y quedó en el repo
+(`mobile/lib/features/admin/`), pero ya no es el que se usa — fue
+reemplazado por `web/` (ver [CLAUDE.md](../CLAUDE.md), sección Web). La app
+Android quedó, en la práctica, solo para el rol granjero (Semana 4-5).
 
 ## Semana 1-2: Backend base + BD
 
@@ -118,7 +125,7 @@ puede cerrar una crianza completa desde el celular.
 
 ## Pospuesto (no es alcance actual)
 
-- **Panel web (React) para el administrador**: la propuesta original lo
-  incluía como tercer componente. Se pospone — se evalúa más adelante si
-  hace falta (ej. reportes en pantalla grande), pero la app Android ya
-  cubre el rol de administrador.
+Nada pendiente de la propuesta original queda pospuesto a esta altura: los
+tres componentes (backend, app Android para el granjero, panel web para el
+administrador) están construidos — ver la segunda vuelta del "Ajuste de
+alcance" más arriba.
