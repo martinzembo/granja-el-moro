@@ -111,8 +111,19 @@ app lo usa para "Crear cuenta") y usa `RegistroCreate`
 (`app/schemas/usuario.py`), que a propósito no tiene campo `rol` —
 `model_config = ConfigDict(extra="forbid")` hace que colar un `rol` en el
 body devuelva 422 en vez de ignorarlo en silencio. El registro público
-siempre crea un granjero, activo de inmediato. La única forma de dar de alta
-un admin es `python -m app.db.crear_admin --nombre "..." --email ... --password ...`
+siempre crea un granjero, pero **inactivo** (`activo=False`) — pedido del
+docente de la cátedra: antes se activaba solo, pero eso permitía que
+cualquiera con el link de la app quedara cargado como granjero sin que el
+administrador se enterara. Un admin lo tiene que habilitar a mano con
+`PATCH /usuarios/{id}/activar` (`app/api/routers/usuarios.py`) — hasta
+entonces, `POST /auth/login` devuelve 403. `GET /usuarios?activo=false`
+lista las cuentas pendientes (el filtro por defecto de ese endpoint sigue
+siendo `activo=true`, para no romper el selector de granjero al asignar un
+galpón). En la app, `UsuariosPendientesScreen` (entrada desde un ícono con
+badge en `AdminHomeScreen`) es la pantalla para aprobarlas; el registro ya
+no hace login automático después de crear la cuenta, porque fallaría con
+403 justo después. La única forma de dar de alta un admin directamente
+activo es `python -m app.db.crear_admin --nombre "..." --email ... --password ...`
 (corre directo contra la base, sin pasar por HTTP — ver ese archivo). Otras
 reglas de `RegistroCreate`/`UsuarioCreate`/`LoginRequest`: contraseña mínimo
 8 caracteres, email **case-sensitive** a propósito (decisión explícita del

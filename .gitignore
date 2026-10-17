@@ -28,3 +28,8 @@ Thumbs.db
 
 # Datos reales de la granja (costos, tarifas, producción) - no se comparte
 docs/crianza92.xls
+
+# Material para el informe final de la materia: proyectos de otros alumnos
+# (con legajos y nombres reales) y documentos del profesor - no corresponde
+# subirlo a un repo de código.
+Para Informe/

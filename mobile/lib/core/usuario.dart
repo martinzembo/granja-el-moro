@@ -6,12 +6,19 @@ RolUsuario rolDesdeString(String valor) {
 
 /// Espejo de `UsuarioOut` del backend (app/schemas/usuario.py).
 class Usuario {
-  Usuario({required this.id, required this.nombre, required this.email, required this.rol});
+  Usuario({
+    required this.id,
+    required this.nombre,
+    required this.email,
+    required this.rol,
+    required this.activo,
+  });
 
   final int id;
   final String nombre;
   final String email;
   final RolUsuario rol;
+  final bool activo;
 
   factory Usuario.fromJson(Map<String, dynamic> json) {
     return Usuario(
@@ -19,6 +26,7 @@ class Usuario {
       nombre: json['nombre'] as String,
       email: json['email'] as String,
       rol: rolDesdeString(json['rol'] as String),
+      activo: json['activo'] as bool,
     );
   }
 }

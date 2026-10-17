@@ -45,6 +45,22 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _irARegistro() async {
+    final cuentaCreada = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(builder: (_) => const RegisterScreen()),
+    );
+    if (cuentaCreada == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Cuenta creada. Un administrador tiene que habilitarla antes de que puedas ingresar.',
+          ),
+          duration: Duration(seconds: 6),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -102,11 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 12),
                   TextButton(
-                    onPressed: _cargando
-                        ? null
-                        : () => Navigator.of(context).push(
-                              MaterialPageRoute(builder: (_) => const RegisterScreen()),
-                            ),
+                    onPressed: _cargando ? null : _irARegistro,
                     child: const Text('¿No tenés cuenta? Creá una'),
                   ),
                 ],

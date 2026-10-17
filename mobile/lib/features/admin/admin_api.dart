@@ -37,6 +37,17 @@ class AdminApi {
     return data.map((e) => Usuario.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  /// Cuentas autoregistradas que todavía no habilitó ningún admin (ver
+  /// app/api/routers/usuarios.py `listar`, `?activo=false`).
+  Future<List<Usuario>> usuariosPendientes() async {
+    final data = await _client.get('/usuarios?activo=false') as List;
+    return data.map((e) => Usuario.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  Future<void> activarUsuario(int usuarioId) {
+    return _client.patch('/usuarios/$usuarioId/activar');
+  }
+
   Future<List<CrianzaGalpon>> galponesDeCrianza(int crianzaId) async {
     final data = await _client.get('/crianzas/$crianzaId/galpones') as List;
     return data.map((e) => CrianzaGalpon.fromJson(e as Map<String, dynamic>)).toList();

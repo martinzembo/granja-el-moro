@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/auth_service.dart';
+import '../../core/usuario.dart';
 import 'admin_api.dart';
 import 'admin_models.dart';
 import 'crianza_detail_screen.dart';
 import 'nueva_crianza_form_screen.dart';
+import 'usuarios_pendientes_screen.dart';
 
 /// Punto de entrada del flujo del administrador: lista de crianzas, alta de
 /// una nueva, y desde ahí se entra a galpones/alertas/cierre de cada una.
@@ -19,17 +21,20 @@ class AdminHomeScreen extends StatefulWidget {
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
   late AdminApi _api;
   late Future<List<Crianza>> _crianzas;
+  late Future<List<Usuario>> _pendientes;
 
   @override
   void initState() {
     super.initState();
     _api = AdminApi(context.read<AuthService>().api);
     _crianzas = _api.crianzas();
+    _pendientes = _api.usuariosPendientes();
   }
 
   Future<void> _refrescar() async {
     setState(() {
       _crianzas = _api.crianzas();
+      _pendientes = _api.usuariosPendientes();
     });
     await _crianzas;
   }
@@ -41,6 +46,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
     if (ok == true) await _refrescar();
   }
 
+  Future<void> _verPendientes() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const UsuariosPendientesScreen()),
+    );
+    await _refrescar();
+  }
+
   @override
   Widget build(BuildContext context) {
     final usuario = context.watch<AuthService>().usuario!;
@@ -48,6 +60,21 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       appBar: AppBar(
         title: Text('Hola, ${usuario.nombre}'),
         actions: [
+          FutureBuilder<List<Usuario>>(
+            future: _pendientes,
+            builder: (context, snapshot) {
+              final cantidad = snapshot.data?.length ?? 0;
+              return IconButton(
+                tooltip: 'Cuentas pendientes de aprobar',
+                icon: Badge(
+                  label: Text('$cantidad'),
+                  isLabelVisible: cantidad > 0,
+                  child: const Icon(Icons.person_add_alt),
+                ),
+                onPressed: _verPendientes,
+              );
+            },
+          ),
           IconButton(icon: const Icon(Icons.logout), onPressed: () => context.read<AuthService>().logout()),
         ],
       ),

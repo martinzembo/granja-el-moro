@@ -64,10 +64,20 @@ def crear_usuario(client, db_session):
 
             crear_admin(db_session, nombre, email, password)
         else:
+            from app.models.usuario import Usuario
+
             client.post(
                 "/auth/register",
                 json={"nombre": nombre, "email": email, "password": password},
             )
+            # El registro público ahora crea la cuenta inactiva (la tiene
+            # que habilitar un admin, ver app/api/routers/usuarios.py
+            # `activar`) — este fixture activa directo contra la base para
+            # no tener que simular ese paso en cada test que solo necesita
+            # un granjero logueado.
+            granjero = db_session.query(Usuario).filter(Usuario.email == email).first()
+            granjero.activo = True
+            db_session.commit()
         login = client.post("/auth/login", json={"email": email, "password": password})
         token = login.json()["access_token"]
         return {"Authorization": f"Bearer {token}"}

@@ -43,13 +43,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _emailCtrl.text.trim(),
             _passwordCtrl.text,
           );
-      // AuthService ya quedó autenticado (notifyListeners cambia lo que
-      // muestra _Portal en app.dart) — pero esta pantalla se abrió con un
-      // push desde el login, así que sigue "encima" en la pila de
-      // navegación hasta que la saquemos. Sin este pop, quedaría tapando
-      // la pantalla nueva aunque el login ya haya funcionado.
+      // La cuenta queda inactiva hasta que un admin la habilite — no hay
+      // sesión que iniciar todavía. Se vuelve a la pantalla de login (que
+      // abrió esta con un push) pasándole `true` para que muestre el
+      // aviso de "pendiente de aprobación".
       if (!mounted) return;
-      Navigator.of(context).popUntil((route) => route.isFirst);
+      Navigator.of(context).pop(true);
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
