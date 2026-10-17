@@ -302,7 +302,17 @@ archivos para no tener dos formas distintas de organizar lo mismo:
   apuntando a la IP de esa compu.
 - `src/core/AuthContext.jsx` — sesión del admin (token en `localStorage`),
   espejo de `AuthService` en mobile. A propósito rechaza un login que no
-  sea de un usuario `admin` — el panel web no es para granjeros.
+  sea de un usuario `admin` — el panel web no es para granjeros. Pedido
+  explícito del cliente, medida de seguridad: ir atrás/adelante con los
+  botones del navegador fuerza logout en vez de dejar ver el panel sin
+  loguearse de nuevo. Dos chequeos porque el navegador puede volver a esa
+  página de dos formas distintas: restaurando una versión "congelada" sin
+  re-ejecutar JS (bfcache — se detecta con el evento `pageshow` y
+  `event.persisted`) o haciendo una recarga completa (se detecta con
+  `performance.getEntriesByType('navigation')[0].type === 'back_forward'`,
+  la Navigation Timing API). Sin el segundo chequeo, un navegador que no
+  use bfcache dejaría pasar la recarga completa con el token todavía
+  válido, sin pedir login de nuevo.
 - `src/features/admin/adminApi.js` — mismos endpoints que
   `mobile/lib/features/admin/admin_api.dart`, 1:1.
 - `src/features/admin/*Screen.jsx` — una pantalla por archivo, mismo

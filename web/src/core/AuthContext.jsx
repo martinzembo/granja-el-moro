@@ -17,6 +17,20 @@ export function AuthProvider({ children }) {
   const [estado, setEstado] = useState('cargando')
 
   useEffect(() => {
+    // Medida de seguridad pedida por el cliente: ir atrás/adelante con los
+    // botones del navegador no tiene que dejar entrar sin loguearse de
+    // nuevo. Esto cubre el caso en que el navegador NO restaura desde
+    // bfcache (ver el otro efecto más abajo) sino que hace una recarga
+    // completa — la Navigation Timing API dice si esa carga vino de
+    // back/forward (`type: 'back_forward'`), a diferencia de abrir la URL
+    // de nuevo o recargar con F5.
+    const [entrada] = performance.getEntriesByType('navigation')
+    if (entrada?.type === 'back_forward') {
+      localStorage.removeItem(STORAGE_KEY)
+      setEstado('noAutenticado')
+      return
+    }
+
     const guardado = localStorage.getItem(STORAGE_KEY)
     if (!guardado) {
       setEstado('noAutenticado')
@@ -61,6 +75,21 @@ export function AuthProvider({ children }) {
     setUsuario(null)
     setEstado('noAutenticado')
   }, [])
+
+  // Pedido explícito del cliente, medida de seguridad: ir atrás y adelante
+  // con los botones del navegador no tiene que dejar ver el panel sin
+  // loguearse de nuevo. El navegador puede restaurar la página "congelada"
+  // desde el back-forward cache (bfcache) al navegar así, sin volver a
+  // correr este componente — eso saltearía el login aunque la sesión en
+  // React ya no exista. El evento `pageshow` con `persisted: true` es la
+  // forma estándar de detectar esa restauración; ahí se fuerza logout.
+  useEffect(() => {
+    function alRestaurarDesdeBfcache(event) {
+      if (event.persisted) logout()
+    }
+    window.addEventListener('pageshow', alRestaurarDesdeBfcache)
+    return () => window.removeEventListener('pageshow', alRestaurarDesdeBfcache)
+  }, [logout])
 
   const api = new ApiClient(token)
 
